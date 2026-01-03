@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminLogin from "./login/page";
 import AdminDashboard from "@/src/app/admin/AdminDashboard/page";
+import BakeryLoader from "@/src/components/BakeryLoader";
 
 export default function AdminRoot() {
   const router = useRouter();
@@ -15,16 +16,13 @@ export default function AdminRoot() {
     setIsAuthenticated(auth);
 
     if (!auth) {
-      router.replace("/admin"); // stay on /admin → shows login
+      router.replace("/admin");
     }
   }, [router]);
 
+  // 🔹 Bakery loader while checking auth / fetching data
   if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-600 to-red-600 flex items-center justify-center">
-        <div className="text-white text-2xl font-bold">Loading Admin Panel...</div>
-      </div>
-    );
+    return <BakeryLoader />;
   }
 
   return isAuthenticated ? <AdminDashboard /> : <AdminLogin />;

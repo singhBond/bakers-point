@@ -4,9 +4,9 @@
 import React, { useEffect, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Card } from "@/src/components/ui/card";
 import { Bike, Pencil } from "lucide-react";
 
 export default function DeliveryChargeSettings() {
@@ -59,7 +59,7 @@ export default function DeliveryChargeSettings() {
   };
 
   return (
-    <Card className="mb-8 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 shadow-lg">
+    <Card className="mb-8 p-6 bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200 shadow-lg">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
         {/* Left: Icon + Info */}
         <div className="flex items-center gap-4">

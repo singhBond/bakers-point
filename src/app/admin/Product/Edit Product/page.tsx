@@ -11,12 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+} from "@/src/components/ui/dialog";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { Textarea } from "@/src/components/ui/textarea";
+import { Button } from "@/src/components/ui/button";
+import { Switch } from "@/src/components/ui/switch";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
 import { Product } from "@/src/types/Product"; // ✅ FIXED — shared Product type
@@ -88,7 +88,9 @@ const DragDropUpload: React.FC<{
     <div className="space-y-3">
       <div
         className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-          dragActive ? "border-yellow-500 bg-yellow-50" : "border-gray-300 hover:border-yellow-500"
+          dragActive
+            ? "border-yellow-500 bg-yellow-50"
+            : "border-gray-300 hover:border-yellow-500"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -100,13 +102,19 @@ const DragDropUpload: React.FC<{
           setDragActive(false);
           handleFiles(e.dataTransfer.files);
         }}
-        onClick={() => document.getElementById("edit-product-image-input")?.click()}
+        onClick={() =>
+          document.getElementById("edit-product-image-input")?.click()
+        }
       >
         <Upload className="mx-auto h-8 w-8 text-gray-400" />
         <p className="text-sm text-gray-600 mt-2">
-          {previews.length > 0 ? "Add more images" : "Click or drag to add images"}
+          {previews.length > 0
+            ? "Add more images"
+            : "Click or drag to add images"}
         </p>
-        <p className="text-xs text-gray-500">Auto-compressed under 500 KB each</p>
+        <p className="text-xs text-gray-500">
+          Auto-compressed under 500 KB each
+        </p>
       </div>
 
       <input
@@ -126,13 +134,18 @@ interface EditProductDialogProps {
   product: Product;
 }
 
-export default function EditProductDialog({ categoryId, product }: EditProductDialogProps) {
+export default function EditProductDialog({
+  categoryId,
+  product,
+}: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const [name, setName] = useState(product.name);
   const [price, setPrice] = useState<number | "">(product.price);
-  const [halfPrice, setHalfPrice] = useState<number | "">(product.halfPrice || "");
+  const [halfPrice, setHalfPrice] = useState<number | "">(
+    product.halfPrice || ""
+  );
   const [quantity, setQuantity] = useState(product.quantity || "1");
   const [description, setDescription] = useState(product.description || "");
   const [isVeg, setIsVeg] = useState(product.isVeg);
@@ -152,7 +165,8 @@ export default function EditProductDialog({ categoryId, product }: EditProductDi
       setDescription(product.description ?? "");
       setIsVeg(product.isVeg);
 
-      const existing = product.imageUrls || (product.imageUrl ? [product.imageUrl] : []);
+      const existing =
+        product.imageUrls || (product.imageUrl ? [product.imageUrl] : []);
       setImages(existing);
       setPreviews(existing);
     }
@@ -175,16 +189,19 @@ export default function EditProductDialog({ categoryId, product }: EditProductDi
     setIsLoading(true);
 
     try {
-      await updateDoc(doc(db, "categories", categoryId, "products", product.id), {
-        name: name.trim(),
-        price: Number(price),
-        halfPrice: halfPrice ? Number(halfPrice) : null,
-        quantity,
-        description: description.trim() || null,
-        imageUrls: images.length > 0 ? images : null,
-        imageUrl: images[0] || "",
-        isVeg,
-      });
+      await updateDoc(
+        doc(db, "categories", categoryId, "products", product.id),
+        {
+          name: name.trim(),
+          price: Number(price),
+          halfPrice: halfPrice ? Number(halfPrice) : null,
+          quantity,
+          description: description.trim() || null,
+          imageUrls: images.length > 0 ? images : null,
+          imageUrl: images[0] || "",
+          isVeg,
+        }
+      );
 
       setOpen(false);
     } catch (err) {
@@ -203,7 +220,7 @@ export default function EditProductDialog({ categoryId, product }: EditProductDi
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Menu Item</DialogTitle>
           <DialogDescription>Update product details below</DialogDescription>
@@ -211,54 +228,73 @@ export default function EditProductDialog({ categoryId, product }: EditProductDi
 
         <div className="space-y-5 py-4">
           {/* Name */}
-          <div>
+          <div className="space-y-1">
             <Label>Name *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isLoading}
+              placeholder="Enter item name"
+            />
           </div>
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Full Price *</Label>
+            <div className="space-y-1">
+              <Label>Cake Only *</Label>
               <Input
                 type="number"
                 value={price}
-                onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) =>
+                  setPrice(e.target.value ? Number(e.target.value) : "")
+                }
                 disabled={isLoading}
+                placeholder="Enter cake price "
               />
             </div>
-            <div>
-              <Label>Half Price</Label>
+            <div className="space-y-1">
+              <Label>Birthday Pack Price</Label>
               <Input
                 type="number"
                 value={halfPrice}
-                onChange={(e) => setHalfPrice(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) =>
+                  setHalfPrice(e.target.value ? Number(e.target.value) : "")
+                }
                 disabled={isLoading}
+                placeholder="Enter birthday pack price"
               />
             </div>
           </div>
 
           {/* Quantity */}
-          <div>
-            <Label>Serve for</Label>
+          <div className="space-y-1">
+            <Label>Quantity</Label>
             <Input
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              placeholder="e.g., 1 Person"
+              placeholder="eg: 2 Pound, 1 Pc, etc"
               disabled={isLoading}
             />
           </div>
 
           {/* Veg Switch */}
           <div className="flex items-center space-x-3">
-            <Switch checked={isVeg} onCheckedChange={setIsVeg} disabled={isLoading} />
+            <Switch
+              checked={isVeg}
+              onCheckedChange={setIsVeg}
+              disabled={isLoading}
+            />
             <Label className="font-medium">
-              {isVeg ? <span className="text-green-600">Veg</span> : <span className="text-red-600">Non-Veg</span>}
+              {isVeg ? (
+                <span className="text-green-600">Veg</span>
+              ) : (
+                <span className="text-red-600">Non-Veg</span>
+              )}
             </Label>
           </div>
 
           {/* Description */}
-          <div>
+          <div className="space-y-1">
             <Label>Description</Label>
             <Textarea
               value={description}
@@ -269,35 +305,46 @@ export default function EditProductDialog({ categoryId, product }: EditProductDi
           </div>
 
           {/* Images */}
-          <div>
+
+          <div className="space-y-1">
             <Label>Images</Label>
 
-            {previews.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 mt-3">
-                {previews.map((src, i) => (
-                  <div key={i} className="relative group">
-                    <img src={src} className="w-full h-28 object-cover rounded-lg border" />
-                    <button
-                      onClick={() => handleRemoveImage(i)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
-                      disabled={isLoading}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {/* Preview Images */}
+              {previews.map((src, i) => (
+                <div key={i} className="relative group">
+                  <img
+                    src={src}
+                    className="w-full h-36 object-cover rounded-lg border"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
+                    disabled={isLoading}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
 
-            {/* Upload */}
-            <div className="mt-4">
-              <DragDropUpload previews={previews} onAdd={handleAddImages} onRemove={handleRemoveImage} />
+              {/* Upload Field (comes right after images) */}
+              <div className="">
+                <DragDropUpload
+                  previews={previews}
+                  onAdd={handleAddImages}
+                  onRemove={handleRemoveImage}
+                />
+              </div>
             </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button

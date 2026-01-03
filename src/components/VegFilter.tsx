@@ -1,5 +1,5 @@
 // components/menu/VegFilter.tsx
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 
 interface Props {
   filter: "all" | "veg" | "nonveg";

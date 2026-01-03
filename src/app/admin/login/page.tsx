@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Card } from "@/src/components/ui/card";
 
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
@@ -16,7 +16,7 @@ export default function AdminLogin() {
   }, []);
 
   const handleLogin = () => {
-    if (password.trim() === "Bakery123") {
+    if (password.trim() === "Bakery") {
       sessionStorage.setItem("adminAuth", "true");
 
       // ✅ Redirect ONLY after correct password

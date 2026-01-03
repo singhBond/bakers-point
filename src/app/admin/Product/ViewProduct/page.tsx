@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+} from "@/src/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
+import { Badge } from "@/src/components/ui/badge";
+import { Card } from "@/src/components/ui/card";
 
 type Product = {
   id: string;
@@ -57,7 +57,7 @@ export default function ViewProductDialog({ product }: ViewProductDialogProps) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] w-full overflow-y-auto bg-white">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-800">
             {product.name}
@@ -126,7 +126,7 @@ export default function ViewProductDialog({ product }: ViewProductDialogProps) {
 
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Card className="p-5 space-y-3 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+            <Card className="p-5 space-y-3 bg-linear-to-br from-yellow-50 to-orange-50 border-yellow-200">
               <div className="flex items-center gap-3">
                 <IndianRupee className="h-6 w-6 text-yellow-700" />
                 <div>
@@ -137,7 +137,7 @@ export default function ViewProductDialog({ product }: ViewProductDialogProps) {
             </Card>
 
             {product.halfPrice && (
-              <Card className="p-5 space-y-3 bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
+              <Card className="p-5 space-y-3 bg-linear-to-br from-teal-50 to-cyan-50 border-teal-200">
                 <div className="flex items-center gap-3">
                   <IndianRupee className="h-6 w-6 text-teal-700" />
                   <div>
@@ -149,7 +149,7 @@ export default function ViewProductDialog({ product }: ViewProductDialogProps) {
             )}
 
             {product.quantity && (
-              <Card className="p-5 space-y-3 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <Card className="p-5 space-y-3 bg-linear-to-br from-blue-50 to-indigo-50 border-blue-200">
                 <div className="flex items-center gap-3">
                   <Users className="h-6 w-6 text-blue-700" />
                   <div>
@@ -160,7 +160,7 @@ export default function ViewProductDialog({ product }: ViewProductDialogProps) {
               </Card>
             )}
 
-            <Card className="p-5 space-y-3 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+            <Card className="p-5 space-y-3 bg-linear-to-br from-purple-50 to-pink-50 border-purple-200">
               <div className="flex items-center gap-3">
                 <Clock className="h-6 w-6 text-purple-700" />
                 <div>

@@ -11,16 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+} from "@/src/components/ui/dialog";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { Textarea } from "@/src/components/ui/textarea";
+import { Button } from "@/src/components/ui/button";
+import { Switch } from "@/src/components/ui/switch";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
 
-// Image Compression
+// Image Compression (unchanged)
 const compressImage = (file: File): Promise<string> =>
   new Promise((resolve) => {
     const img = new Image();
@@ -67,7 +67,7 @@ const compressImage = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-// Upload Box
+// Updated Upload Component – upload box sits inline after previews
 const DragDropUpload: React.FC<{
   onImagesChange: (imgs: string[]) => void;
   previews: string[];
@@ -86,30 +86,7 @@ const DragDropUpload: React.FC<{
 
   return (
     <div className="space-y-4">
-      {/* Upload Box */}
-      <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
-          drag ? "border-yellow-500 bg-yellow-50" : "border-gray-300 hover:border-yellow-500"
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDrag(true);
-        }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDrag(false);
-          handleFiles(e.dataTransfer.files);
-        }}
-        onClick={() => document.getElementById("add-prod-img")?.click()}
-      >
-        <Upload className="mx-auto h-10 w-10 text-gray-400" />
-        <p className="mt-2 text-sm text-gray-700">
-          {previews.length ? "Add more images" : "Click or drag images here"}
-        </p>
-        <p className="text-xs text-gray-500">Auto-compressed under 500KB</p>
-      </div>
-
+      {/* Hidden file input */}
       <input
         id="add-prod-img"
         type="file"
@@ -119,23 +96,51 @@ const DragDropUpload: React.FC<{
         onChange={(e) => handleFiles(e.target.files)}
       />
 
-      {/* Previews */}
-      {previews.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          {previews.map((src, i) => (
-            <div key={i} className="relative group">
-              <img src={src} className="w-full h-28 object-cover rounded-md border" />
+      {/* Previews + Upload box in one flex row */}
+      <div className="flex flex-wrap items-end gap-3">
+        {/* Uploaded image previews */}
+        {previews.map((src, i) => (
+          <div key={i} className="relative group">
+            <img
+              src={src}
+              alt="preview"
+              className="w-28 h-28 object-cover rounded-md border"
+            />
+            <button
+              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+              onClick={() => onRemove(i)}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
 
-              <button
-                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                onClick={() => onRemove(i)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+        {/* Upload / Add-more box – appears right after the last image */}
+        <div
+          className={`flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed rounded-md cursor-pointer transition ${
+            drag ? "border-yellow-500 bg-yellow-50" : "border-gray-300 hover:border-yellow-500"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDrag(true);
+          }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            handleFiles(e.dataTransfer.files);
+          }}
+          onClick={() => document.getElementById("add-prod-img")?.click()}
+        >
+          <Upload className="h-8 w-8 text-gray-400" />
+          <p className="mt-1 text-xs text-gray-600">
+            {previews.length ? "Add more" : "Upload"}
+          </p>
         </div>
-      )}
+      </div>
+
+      {/* Optional hint below */}
+      <p className="text-xs text-gray-500">Auto-compressed under 500KB</p>
     </div>
   );
 };
@@ -182,7 +187,7 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
         createdAt: serverTimestamp(),
       });
 
-      // Reset
+      // Reset form
       setName("");
       setPrice("");
       setHalfPrice("");
@@ -202,15 +207,13 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Trigger */}
       <DialogTrigger asChild>
         <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600">
           <Plus className="mr-1 h-4 w-4" /> Add Item
         </Button>
       </DialogTrigger>
 
-      {/* Dialog */}
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] w-full overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Menu Item</DialogTitle>
           <DialogDescription>Half price & description optional.</DialogDescription>
@@ -218,51 +221,64 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
 
         <div className="space-y-5 py-4">
           {/* Name */}
-          <div>
+          <div className="space-y-1">
             <Label>Name *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={load} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={load} placeholder="Enter Item Name" />
           </div>
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Full Price *</Label>
+            <div className="space-y-1">
+              <Label>Only Cake Price *</Label>
               <Input
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
                 disabled={load}
+                placeholder="Enter cake price only"
               />
             </div>
-            <div>
-              <Label>Half Price</Label>
+            <div className="space-y-1">
+              <Label>Birthday Pack Price</Label>
               <Input
                 type="number"
                 value={halfPrice}
                 onChange={(e) => setHalfPrice(e.target.value ? Number(e.target.value) : "")}
                 disabled={load}
+                placeholder="Enter birthday pack price"
               />
             </div>
           </div>
 
           {/* Quantity */}
-          <div>
-            <Label>Serve for</Label>
+          <div className="space-y-1">
+            <Label>Quantity</Label>
             <Input
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               disabled={load}
+              placeholder="eg: 2 Pound, 1 Pc, etc"
             />
           </div>
 
           {/* Veg */}
           <div className="flex items-center space-x-3">
-            <Switch checked={isVeg} onCheckedChange={setVeg} disabled={load} />
-            <Label>{isVeg ? "Veg" : "Non-Veg"}</Label>
-          </div>
+                      <Switch
+                        checked={isVeg}
+                        onCheckedChange={setVeg}
+                        // disabled={isLoading}
+                      />
+                      <Label className="font-medium">
+                        {isVeg ? (
+                          <span className="text-green-600">Veg</span>
+                        ) : (
+                          <span className="text-red-600">Non-Veg</span>
+                        )}
+                      </Label>
+                    </div>
 
           {/* Description */}
-          <div>
+          <div className="space-y-1">
             <Label>Description</Label>
             <Textarea
               value={desc}
@@ -272,10 +288,9 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
             />
           </div>
 
-          {/* Images */}
-          <div>
+          {/* Images – now with inline upload box */}
+          <div className="space-y-1">
             <Label>Images</Label>
-
             <DragDropUpload
               previews={previews}
               onImagesChange={addImages}

@@ -7,11 +7,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/src/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Minus } from "lucide-react";
 
-// Read More Component
+// Read More Component (unchanged)
 const DescriptionWithReadMore: React.FC<{ text: string }> = ({ text }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const maxLength = 120;
@@ -43,7 +43,7 @@ interface Product {
   description?: string;
   imageUrl?: string;
   imageUrls?: string[];
-  quantity?: string;
+  quantity?: string; // e.g. "1 Pound,2 Pound,3 Pound" or just "1 Pc"
   isVeg: boolean;
 }
 
@@ -58,11 +58,15 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   const [tempPortion, setTempPortion] = useState<"full" | "half">("full");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // NEW: For quantity selection tabs
+  const [selectedQuantityOption, setSelectedQuantityOption] = useState<string | null>(null);
+
   useEffect(() => {
     if (open) {
       setTempQuantity(1);
       setTempPortion("full");
       setCurrentImageIndex(0);
+      setSelectedQuantityOption(null); // reset on open
     }
   }, [open]);
 
@@ -75,6 +79,17 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   };
 
   const images = getImageArray();
+
+  // Parse quantity options if exists (e.g. "1 Pound,2 Pound,3 Pound")
+  const quantityOptions = product.quantity
+    ? product.quantity.split(",").map((q) => q.trim()).filter(Boolean)
+    : [];
+
+  const hasMultipleQuantityOptions = quantityOptions.length > 1;
+
+  // Use selected option or fallback to first one or product.quantity
+  const displayQuantity = selectedQuantityOption || quantityOptions[0] || product.quantity || "";
+
   const currentPrice =
     tempPortion === "half"
       ? product.halfPrice || product.price / 2
@@ -93,7 +108,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
       quantity: tempQuantity,
       isVeg: product.isVeg,
       imageUrl: images[0],
-      serves: product.quantity,
+      serves: displayQuantity || undefined, // send selected quantity
     };
 
     const existingIndex = cart.findIndex(
@@ -106,15 +121,11 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
       cart.push(newItem);
     }
 
-    // Save to localStorage
     localStorage.setItem("fastfood_cart", JSON.stringify(cart));
-
-    // DISPATCH CUSTOM EVENT — This makes cart update INSTANTLY everywhere
     window.dispatchEvent(new Event("cartUpdated"));
 
-    // Optional: Show toast-like feedback
     const toast = document.createElement("div");
-    toast.innerText = `Added ${tempQuantity}x ${product.name} to cart!`;
+    toast.innerText = `Added ${tempQuantity}x ${product.name} (${displayQuantity}) to cart!`;
     toast.className = "fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 animate-bounce";
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
@@ -134,7 +145,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
   return (
     <>
-      {/* Product Card */}
+      {/* Product Card (unchanged) */}
       <div
         onClick={() => {
           onClick?.();
@@ -239,31 +250,60 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
                   {product.halfPrice && (
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">Plate Type:</p>
+                      <p className="text-md font-medium text-gray-700 mb-2">Cake Type:</p>
                       <div className="flex gap-3">
                         <Button
-                          variant={tempPortion === "full" ? "default" : "outline"}
+                          variant={tempPortion === "full" ? "orange" : "outline"}
                           size="sm"
                           className="flex-1"
                           onClick={() => setTempPortion("full")}
                         >
-                          Full Plate
+                          Cake Only
                         </Button>
                         <Button
-                          variant={tempPortion === "half" ? "default" : "outline"}
+                          variant={tempPortion === "half" ? "orange" : "outline"}
                           size="sm"
                           className="flex-1"
                           onClick={() => setTempPortion("half")}
                         >
-                          Half Plate
+                          Birthday Pack
                         </Button>
                       </div>
                     </div>
                   )}
 
-                  {product.quantity && product.quantity !== "1" && (
-                    <p className="text-sm text-gray-600">
-                      <strong>Serves:</strong> {product.quantity}
+                  {/* NEW: Square Quantity Tabs */}
+                  {hasMultipleQuantityOptions && (
+                    <div>
+                      <p className="text-md font-medium text-gray-700 mb-2">Select Quantity:</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {quantityOptions.map((option) => (
+                          <Button
+                            key={option}
+                            variant={selectedQuantityOption === option ? "default" : "outline"}
+                            className={`h-12 text-sm font-medium ${
+                              selectedQuantityOption === option
+                                ? "bg-yellow-600 hover:bg-yellow-700 text-white"
+                                : ""
+                            }`}
+                            onClick={() => setSelectedQuantityOption(option)}
+                          >
+                            {option}
+                          </Button>
+                        ))}
+                      </div>
+                      {!selectedQuantityOption && quantityOptions[0] && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Default: {quantityOptions[0]}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Show single quantity if no options */}
+                  {!hasMultipleQuantityOptions && product.quantity && product.quantity !== "1" && (
+                    <p className="text-md text-gray-600">
+                      <strong>Quantity :</strong> {product.quantity}
                     </p>
                   )}
 

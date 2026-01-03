@@ -3,9 +3,9 @@
 
 import React, { useState } from "react";
 import { Pencil, Eye, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
+import { Badge } from "@/src/components/ui/badge";
+import { Dialog } from "@/src/components/ui/dialog";
 
 // Import dialogs
 import EditProductDialog from "@/src/app/admin/Product/Edit Product/page";
@@ -41,7 +41,7 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
   const totalImages = (product.imageUrls?.length || 0) + (product.imageUrl ? 1 : 0);
 
   return (
-    <tr className="border-b hover:bg-orange-50/60 transition-colors duration-200">
+    <tr className="border-b hover:bg-orange-50/60 transition-colors duration-200 ">
       <td className="px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="font-medium text-gray-900 max-w-xs truncate">

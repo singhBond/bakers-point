@@ -7,11 +7,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/src/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { Textarea } from "@/src/components/ui/textarea";
 import { ShoppingCart, Plus, Minus, Trash2, Store, Bike, X } from "lucide-react";
 
 interface CartItem {
@@ -31,38 +31,20 @@ export const Cart = () => {
   const [orderMode, setOrderMode] = useState<"offline" | "online">("offline");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState(""); // ← New: Special instructions
+  const [notes, setNotes] = useState("");
   const [address, setAddress] = useState("");
   const deliveryCharge = 50;
 
-
-  //Instant Product added
-  useEffect(() => {
-  const handleCartUpdate = () => {
-    const saved = localStorage.getItem("fastfood_cart");
-    if (saved) {
-      setCart(JSON.parse(saved));
-    } else {
-      setCart([]);
-    }
-  };
-
-  // Initial load
-  handleCartUpdate();
-
-  // Listen for instant updates from ProductItem
-  window.addEventListener("cartUpdated", handleCartUpdate);
-
-  return () => {
-    window.removeEventListener("cartUpdated", handleCartUpdate);
-  };
-}, []); 
-
-  // Load cart from localStorage
+  // Load cart from localStorage on mount (including page refresh)
   useEffect(() => {
     const saved = localStorage.getItem("fastfood_cart");
     if (saved) {
-      setCart(JSON.parse(saved));
+      try {
+        setCart(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse cart from localStorage", e);
+        localStorage.removeItem("fastfood_cart");
+      }
     }
   }, []);
 
@@ -74,6 +56,26 @@ export const Cart = () => {
       localStorage.removeItem("fastfood_cart");
     }
   }, [cart]);
+
+  // Listen for real-time cart updates from ProductItem (instant add)
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      const saved = localStorage.getItem("fastfood_cart");
+      if (saved) {
+        try {
+          setCart(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse cart on update", e);
+        }
+      }
+    };
+
+    // Initial load (already done above, but safe)
+    handleCartUpdate();
+
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+  }, []);
 
   const updateQuantity = (id: string, portion: "full" | "half", delta: number) => {
     setCart((prev) =>
@@ -157,14 +159,13 @@ export const Cart = () => {
 
       {/* Cart Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+        <DialogContent className="max-w-lg max-h-[90vh]  overflow-y-auto rounded-2xl p-0 ">
           <DialogHeader className="p-4 pb-3 border-b sticky top-0 bg-white z-10">
             <DialogTitle className="text-2xl font-bold flex items-center justify-between">
               <span className="flex items-center gap-3">
                 <ShoppingCart size={28} />
                 Your Cart ({totalItems})
               </span>
-              {/* Close Button */}
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X size={22} className="text-gray-600" />
               </Button>
@@ -173,7 +174,7 @@ export const Cart = () => {
 
           <div className="p-6 space-y-6">
             {cart.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 w-full">
                 <ShoppingCart size={64} className="mx-auto mb-4 opacity-30" />
                 <p className="text-lg">Your cart is empty</p>
                 <p className="text-sm">Add delicious items to get started!</p>
@@ -205,7 +206,7 @@ export const Cart = () => {
                                 {item.portion}
                               </span>
                               <div
-                                className={`w-5 h-5 border-2 rounded-sm flex items-center justify-center ml-1 ${
+                                className={`w-5 h-5 border-2 rounded-md flex items-center justify-center  ${
                                   item.isVeg
                                     ? "border-green-600 bg-green-500"
                                     : "border-red-600 bg-red-500"
@@ -215,7 +216,7 @@ export const Cart = () => {
                               </div>
                             </h4>
                             {item.serves && (
-                              <p className="text-xs text-gray-600 mt-1">Serves {item.serves}</p>
+                              <p className="text-xs text-gray-600 mt-1">Quantity : {item.serves}</p>
                             )}
                             <p className="text-lg font-bold text-green-600 mt-1">
                               ₹{item.price} each
@@ -258,7 +259,7 @@ export const Cart = () => {
                 </div>
 
                 {/* Order Mode */}
-                <div className="bg-gray-100 rounded-xl p-4">
+                <div className="bg-gray-100 rounded-xl p-2">
                   <p className="font-semibold mb-3">Order Type</p>
                   <div className="grid grid-cols-2 gap-3">
                     <Button
@@ -266,15 +267,15 @@ export const Cart = () => {
                       className="h-14"
                       onClick={() => setOrderMode("offline")}
                     >
-                      <Store  size={20} />
+                      <Store size={20} />
                       Dine-in/Takeaway
                     </Button>
                     <Button
-                      variant={orderMode === "online" ? "destructive" : "outline"}
+                      variant={orderMode === "online" ? "gogreen" : "outline"}
                       className="h-14"
                       onClick={() => setOrderMode("online")}
                     >
-                      <Bike  size={20} />
+                      <Bike size={20} />
                       Delivery (+₹50)
                     </Button>
                   </div>
@@ -288,7 +289,7 @@ export const Cart = () => {
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
+                      placeholder="Enter your name"
                     />
                   </div>
 
@@ -298,18 +299,17 @@ export const Cart = () => {
                       id="phone"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="9876543210"
+                      placeholder="Enter your phone number"
                     />
                   </div>
 
-                  {/* Special Instructions / Notes (Always Visible) */}
                   <div className="space-y-1">
                     <Label htmlFor="notes">Special Instructions (Optional)</Label>
                     <Textarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="E.g., Less spicy, no onions, extra sauce..."
+                      placeholder="E.g., Less cream, add cherry, extra chocolate..."
                       rows={3}
                       className="resize-none"
                     />
@@ -338,7 +338,7 @@ export const Cart = () => {
                   {orderMode === "online" && (
                     <div className="flex justify-between text-lg">
                       <span>Delivery Charge</span>
-                      <span className="text-green-600">+₹{deliveryCharge}</span>
+                      <span className="text-blue-600">+₹{deliveryCharge}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-2xl font-bold text-green-600 mt-3 pt-3 border-t-2 border-yellow-300">

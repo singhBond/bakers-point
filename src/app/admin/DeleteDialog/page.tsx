@@ -11,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/src/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
 
 interface DeleteDialogProps {
   title?: string;
@@ -53,7 +53,7 @@ export default function DeleteDialog({
         {children}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md w-full">
         <DialogHeader>
           <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
             <AlertTriangle className="h-8 w-8 text-red-600" />
