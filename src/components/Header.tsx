@@ -2,7 +2,7 @@
 import React from "react";
 
 export const Header = () => (
-  <div className="flex flex-col items-center text-center py-4 bg-linear-to-r from-orange-800 via-orange-300 to-orange-800">
+  <div className="flex flex-col items-center text-center py-4 bg-linear-to-r from-orange-700 via-orange-300 to-orange-800">
     <img src="/logo.png" className="h-20 rounded-full" alt="Logo" />
     <h1 className="text-3xl md:text-6xl font-extrabold text-yellow-100">
       Baker's Point
