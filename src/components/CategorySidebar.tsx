@@ -73,7 +73,14 @@ export const CategorySidebar: React.FC<Props> = ({
   );
 
   return (
-    <aside className="w-24 sm:w-40 md:w-32 sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto bg-linear-to-r from-orange-300 via-yellow-50 to-orange-300 border-r rounded-xl shadow-sm p-2 scrollbar-thin">
+    <aside className="w-20 sm:w-40 md:w-32 sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto bg-linear-to-r from-amber-300 via-yellow-50 to-amber-300 border-r rounded-xl shadow-sm p-2 scrollbar-thin">
+      <div 
+      className="absolute inset-0 opacity- backdrop-blur-md bg-repeat " 
+      style={{ 
+        backgroundImage: `url("https://i.pinimg.com/736x/02/b6/55/02b655eea8cd1491b90b358aa7ac1908.jpg")`,
+        backgroundColor: "#5c4033" 
+      }}
+    >
       {loading || categories.length === 0 ? (
         // Show 6 skeleton items while loading or empty
         Array(6).fill(0).map((_, i) => <SkeletonItem key={i} />)
@@ -84,11 +91,11 @@ export const CategorySidebar: React.FC<Props> = ({
             onClick={() => onCategoryChange(cat.id)}
             className={`flex flex-col items-center cursor-pointer rounded-xl px-8 py-2 mb-2 transition-all border ${
               activeCategory === cat.id
-                ? "bg-orange-100 border-orange-400 shadow-lg scale-110"
-                : "hover:bg-gray-50 border-transparent"
+                ? "bg-amber-100 border-amber-500 shadow-lg scale-110"
+                : "hover:bg-amber-50 border-transparent"
             }`}
           >
-            <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-200 shadow-sm">
+            <div className="w-16 h-14 rounded-lg overflow-hidden bg-gray-200 shadow-sm">
               <img
                 src={cat.imageUrl || "/placeholder.svg"}
                 alt={cat.name}
@@ -103,7 +110,7 @@ export const CategorySidebar: React.FC<Props> = ({
             </span>
           </div>
         ))
-      )}
+      )}</div>
     </aside>
   );
 };

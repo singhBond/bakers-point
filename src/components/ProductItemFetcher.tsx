@@ -6,15 +6,20 @@ import { ProductItem } from "./ProductItem";
 import { db } from "@/src/lib/firebase";
 import { collection, query, onSnapshot, DocumentData } from "firebase/firestore";
 
+interface QuantityOption {
+  quantity: string;
+  cakePrice: number;
+  birthdayPackPrice?: number | null;
+}
+
+// Updated Product Interface to match new admin structure
 interface Product {
   id: string;
   name: string;
-  price: number;
-  halfPrice?: number;
   description?: string;
   imageUrl?: string;
   imageUrls?: string[];
-  quantity?: string;
+  quantities: QuantityOption[]; // Required: array of sizes/prices
   isVeg: boolean;
 }
 
@@ -25,11 +30,11 @@ interface ProductItemFetcherProps {
 }
 
 const SkeletonCard = () => (
-  <div className="overflow-hidden rounded-2xl bg-white shadow-md border border-gray-200">
-    <div className="h-56 bg-gray-200 animate-pulse" />
+  <div className="overflow-hidden rounded-2xl bg-white shadow-md border border-gray-200 animate-pulse">
+    <div className="h-56 bg-gray-200" />
     <div className="p-4 space-y-3">
-      <div className="h-6 bg-gray-200 rounded-lg w-3/4 animate-pulse" />
-      <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse" />
+      <div className="h-6 bg-gray-200 rounded-lg w-3/4" />
+      <div className="h-8 bg-gray-200 rounded w-1/2" />
     </div>
   </div>
 );
@@ -55,22 +60,60 @@ export default function ProductItemFetcher({
       (snapshot) => {
         const items: Product[] = snapshot.docs.map((doc) => {
           const data = doc.data() as DocumentData;
+
+          // Handle new structure with quantities array
+          let quantities: QuantityOption[] = [];
+
+          if (Array.isArray(data.quantities)) {
+            quantities = data.quantities.map((q: any) => ({
+              quantity: q.quantity?.trim() || "Standard",
+              cakePrice: Number(q.cakePrice) || 0,
+              birthdayPackPrice:
+                q.birthdayPackPrice !== null && q.birthdayPackPrice !== undefined
+                  ? Number(q.birthdayPackPrice)
+                  : null,
+            }));
+          }
+
+          // Fallback: If no quantities array (old product format), create one from price/halfPrice
+          if (quantities.length === 0) {
+            const fallbackPrice = Number(data.price) || 0;
+            const fallbackHalf = data.halfPrice ? Number(data.halfPrice) : null;
+
+            quantities = [
+              {
+                quantity: data.quantity || "Standard",
+                cakePrice: fallbackPrice,
+                birthdayPackPrice: fallbackHalf,
+              },
+            ];
+          }
+
+          // Filter out invalid quantities
+          quantities = quantities.filter((q) => q.cakePrice > 0 && q.quantity);
+
+          // Default to one empty if somehow still invalid
+          if (quantities.length === 0) {
+            quantities = [{ quantity: "1 Portion", cakePrice: 0 }];
+          }
+
           return {
             id: doc.id,
             name: data.name || "Unnamed Item",
-            price: Number(data.price) || 0,
-            halfPrice: data.halfPrice ? Number(data.halfPrice) : undefined,
-            description: data.description,
-            imageUrl: data.imageUrl,
+            description: data.description || undefined,
+            imageUrl: data.imageUrl || undefined,
             imageUrls: Array.isArray(data.imageUrls)
               ? data.imageUrls.filter(Boolean)
               : data.imageUrl
               ? [data.imageUrl]
               : [],
-            quantity: data.quantity,
+            quantities,
             isVeg: data.isVeg ?? true,
           };
         });
+
+        // Sort products by name for consistent display (optional)
+        items.sort((a, b) => a.name.localeCompare(b.name));
 
         setProducts(items);
         setLoading(false);
@@ -91,7 +134,7 @@ export default function ProductItemFetcher({
     return true;
   });
 
-  // Show loading skeletons
+  // Loading state
   if (loading) {
     return (
       <>
@@ -104,7 +147,7 @@ export default function ProductItemFetcher({
     );
   }
 
-  // Show empty state
+  // Empty state
   if (filteredProducts.length === 0) {
     return (
       <div className="col-span-full text-center py-16">
@@ -127,9 +170,9 @@ export default function ProductItemFetcher({
 
   return (
     <>
-      {/* Optional Category Header (can be moved outside if needed) */}
+      {/* Category Header */}
       {categoryName && (
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3 col-span-full  ">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3 col-span-full">
           {categoryName}
           <span className="text-sm font-normal text-gray-500">
             ({filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"})
@@ -137,12 +180,11 @@ export default function ProductItemFetcher({
         </h2>
       )}
 
+      {/* Product Grid */}
       {filteredProducts.map((product) => (
         <ProductItem
           key={product.id}
           product={product}
-          // Optional: track analytics or scroll into view
-          // onClick={() => console.log("Opened:", product.name)}
         />
       ))}
     </>

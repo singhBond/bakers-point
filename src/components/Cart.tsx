@@ -12,15 +12,17 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
-import { ShoppingCart, Plus, Minus, Trash2, Store, Bike, X } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Store, Bike, X, Package } from "lucide-react";
 
 interface CartItem {
   id: string;
   name: string;
-  price: number;
-  portion: "full" | "half";
+  price: number; // total price per item (cake + pack if selected)
+  cakePrice: number;
+  birthdayPackPrice?: number;
   quantity: number;
-  serves?: string;
+  serves: string; // e.g., "1kg", "500g"
+  withBirthdayPack?: boolean;
   isVeg: boolean;
   imageUrl?: string;
 }
@@ -35,20 +37,21 @@ export const Cart = () => {
   const [address, setAddress] = useState("");
   const deliveryCharge = 50;
 
-  // Load cart from localStorage on mount (including page refresh)
+  // Load cart from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("fastfood_cart");
     if (saved) {
       try {
-        setCart(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setCart(parsed);
       } catch (e) {
-        console.error("Failed to parse cart from localStorage", e);
+        console.error("Failed to parse cart", e);
         localStorage.removeItem("fastfood_cart");
       }
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
+  // Save cart whenever it changes
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem("fastfood_cart", JSON.stringify(cart));
@@ -57,31 +60,28 @@ export const Cart = () => {
     }
   }, [cart]);
 
-  // Listen for real-time cart updates from ProductItem (instant add)
+  // Listen for external cart updates (from ProductItem)
   useEffect(() => {
-    const handleCartUpdate = () => {
+    const handleUpdate = () => {
       const saved = localStorage.getItem("fastfood_cart");
       if (saved) {
         try {
           setCart(JSON.parse(saved));
         } catch (e) {
-          console.error("Failed to parse cart on update", e);
+          console.error(e);
         }
       }
     };
 
-    // Initial load (already done above, but safe)
-    handleCartUpdate();
-
-    window.addEventListener("cartUpdated", handleCartUpdate);
-    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+    window.addEventListener("cartUpdated", handleUpdate);
+    return () => window.removeEventListener("cartUpdated", handleUpdate);
   }, []);
 
-  const updateQuantity = (id: string, portion: "full" | "half", delta: number) => {
+  const updateQuantity = (index: number, delta: number) => {
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.id === id && item.portion === portion
+        .map((item, i) =>
+          i === index
             ? { ...item, quantity: Math.max(1, item.quantity + delta) }
             : item
         )
@@ -89,8 +89,8 @@ export const Cart = () => {
     );
   };
 
-  const removeItem = (id: string, portion: "full" | "half") => {
-    setCart((prev) => prev.filter((item) => !(item.id === id && item.portion === portion)));
+  const removeItem = (index: number) => {
+    setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -103,22 +103,23 @@ export const Cart = () => {
   };
 
   const sendWhatsAppOrder = () => {
-    if (!name || !phone) {
+    if (!name.trim() || !phone.trim()) {
       alert("Please enter your name and phone number!");
       return;
     }
-
-    let message = `*New Order*%0A%0A`;
-    message += `*Customer:* ${name}%0A`;
-    message += `*Phone:* ${phone}%0A`;
-
-    if (notes.trim()) {
-      message += `*Notes:* ${notes.trim()}%0A`;
+    if (orderMode === "online" && !address.trim()) {
+      alert("Please enter delivery address!");
+      return;
     }
 
-    if (orderMode === "online" && address) {
-      message += `*Address:* ${address}%0A`;
-      message += `*Delivery:* Yes (+₹${deliveryCharge})%0A`;
+    let message = `*New Order* 🍰%0A%0A`;
+    message += `*Customer:* ${name.trim()}%0A`;
+    message += `*Phone:* ${phone.trim()}%0A`;
+
+    if (notes.trim()) message += `*Notes:* ${notes.trim()}%0A`;
+    if (orderMode === "online") {
+      message += `*Address:* ${address.trim()}%0A`;
+      message += `*Delivery Charge:* +₹${deliveryCharge}%0A`;
     } else {
       message += `*Mode:* Dine-in / Takeaway%0A`;
     }
@@ -126,19 +127,44 @@ export const Cart = () => {
     message += `%0A*Order Details:*%0A`;
 
     cart.forEach((item) => {
-      const portionText = item.portion === "half" ? " (Half)" : " (Full)";
-      message += `• ${item.quantity}x ${item.name}${portionText} - ₹${item.price * item.quantity}%0A`;
-      if (item.serves) message += `   Serves: ${item.serves}%0A`;
+      const packText = item.withBirthdayPack ? " + Birthday Pack" : "";
+      message += `• ${item.quantity}x ${item.name}%0A`;
+      message += `   → ${item.serves}${packText}%0A`;
+      if (item.withBirthdayPack && item.birthdayPackPrice) {
+        message += `     (Cake ₹${item.cakePrice} + Pack ₹${item.birthdayPackPrice})%0A`;
+      }
+      message += `   ₹${item.price * item.quantity}%0A%0A`;
     });
 
-    message += `%0A*Subtotal:* ₹${subtotal}%0A`;
-    if (orderMode === "online") message += `*Delivery Charge:* ₹${deliveryCharge}%0A`;
-    message += `*Total:* ₹${total}%0A%0AThank you!`;
+    message += `*Subtotal:* ₹${subtotal}%0A`;
+    if (orderMode === "online") message += `*Delivery:* ₹${deliveryCharge}%0A`;
+    message += `*TOTAL:* ₹${total}%0A%0AThank you for your order! 🎉`;
 
     const whatsappUrl = `https://wa.me/918210936795?text=${message}`;
     window.open(whatsappUrl, "_blank");
     clearCart();
   };
+
+  // Prevent browser back when pressing Escape or clicking outside
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setOpen(false);
+      // Prevent history back
+      window.history.pushState(null, "", window.location.href);
+    }
+  };
+
+  // Handle browser back button – keep dialog open
+  useEffect(() => {
+    if (open) {
+      window.history.pushState(null, "", window.location.href);
+      const handlePopState = () => {
+        setOpen(false);
+      };
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, [open]);
 
   return (
     <main>
@@ -147,7 +173,7 @@ export const Cart = () => {
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-6 z-50 cursor-pointer group"
       >
-        <div className="relative bg-yellow-600 hover:bg-yellow-700 text-white p-5 rounded-full shadow-2xl border-4 border-white transition-all group-hover:scale-110">
+        <div className="relative bg-amber-800 hover:bg-yellow-700 text-white p-5 rounded-full shadow-2xl border-4 border-white transition-all group-hover:scale-110">
           <ShoppingCart size={32} />
           {totalItems > 0 && (
             <span className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full min-w-9 h-9 flex items-center justify-center font-bold text-sm animate-pulse shadow-lg">
@@ -158,203 +184,249 @@ export const Cart = () => {
       </div>
 
       {/* Cart Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh]  overflow-y-auto rounded-2xl p-0 ">
-          <DialogHeader className="p-4 pb-3 border-b sticky top-0 bg-white z-10">
-            <DialogTitle className="text-2xl font-bold flex items-center justify-between">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+          <DialogHeader className="p-4 px-10 pb-3 border-b sticky top-0 bg-white z-10 rounded-t-2xl">
+            <DialogTitle className="text-xl font-bold flex items-center justify-between">
               <span className="flex items-center gap-3">
                 <ShoppingCart size={28} />
                 Your Cart ({totalItems})
-              </span>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X size={22} className="text-gray-600" />
-              </Button>
+             </span>
+              <Button
+  variant="ghost"
+  size="icon-lg"
+  onClick={() => setOpen(false)}
+  className="h-11 w-11 sm:h-11 sm:w-11"
+>
+  <X size={24} className="text-gray-600 " />
+</Button>  
+
             </DialogTitle>
+            
           </DialogHeader>
 
           <div className="p-6 space-y-6">
             {cart.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 w-full">
-                <ShoppingCart size={64} className="mx-auto mb-4 opacity-30" />
-                <p className="text-lg">Your cart is empty</p>
-                <p className="text-sm">Add delicious items to get started!</p>
+              <div className="text-center py-16 text-gray-500">
+                <ShoppingCart size={80} className="mx-auto mb-4 opacity-30" />
+                <p className="text-xl font-medium">Your cart is empty</p>
+                <p className="text-sm mt-2">Explore our delicious cakes!</p>
               </div>
             ) : (
               <>
                 {/* Cart Items */}
-                <div className="space-y-4">
-                  {cart.map((item) => (
-                    <div
-                      key={`${item.id}-${item.portion}`}
-                      className="flex gap-4 bg-gray-50 rounded-xl p-4 border"
-                    >
-                      <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gray-200">
-                        <img
-                          src={item.imageUrl || "/placeholder.svg"}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => (e.currentTarget.src = "/placeholder.svg")}
-                        />
-                      </div>
+                <div className="space-y-2 px-3 sm:px-0">
+  {cart.map((item, index) => (
+    <div
+      key={index}
+      className="
+        mx-auto
+        w-full max-w-3xl
+        flex gap-3 sm:gap-4
+        bg-gray-50
+        rounded-2xl
+        px-6 py-3 sm:p-4
+        border border-gray-200
+      "
+    >
+      {/* Image */}
+      <div className="w-20 h-20 sm:w-24 sm:h-24  rounded-xl overflow-hidden shrink-0 bg-gray-200">
+        <img
+          src={item.imageUrl || '/placeholder.svg'}
+          alt={item.name}
+          className="w-full h-full object-cover"
+          onError={(e) => (e.currentTarget.src = '/placeholder.svg')}
+        />
+      </div>
 
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                              {item.name}
-                              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                                {item.portion}
-                              </span>
-                              <div
-                                className={`w-5 h-5 border-2 rounded-md flex items-center justify-center  ${
-                                  item.isVeg
-                                    ? "border-green-600 bg-green-500"
-                                    : "border-red-600 bg-red-500"
-                                }`}
-                              >
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              </div>
-                            </h4>
-                            {item.serves && (
-                              <p className="text-xs text-gray-600 mt-1">Quantity : {item.serves}</p>
-                            )}
-                            <p className="text-lg font-bold text-green-600 mt-1">
-                              ₹{item.price} each
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(item.id, item.portion)}
-                          >
-                            <Trash2 size={18} className="text-red-500" />
-                          </Button>
-                        </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="font-bold text-base sm:text-lg text-gray-800 truncate">
+              {item.name}
+            </h4>
 
-                        <div className="flex items-center gap-3 mt-3">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, item.portion, -1)}
-                          >
-                            <Minus size={16} />
-                          </Button>
-                          <span className="w-12 text-center font-bold text-lg">
-                            {item.quantity}
-                          </span>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, item.portion, 1)}
-                          >
-                            <Plus size={16} />
-                          </Button>
-                          <span className="ml-auto font-bold text-lg">
-                            ₹{item.price * item.quantity}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="text-xs sm:text-sm font-medium bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full">
+                {item.serves}
+              </span>
+
+              {item.withBirthdayPack && (
+                <span className="text-xs sm:text-sm font-medium bg-orange-100 text-orange-700 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
+                  <Package size={14} />
+                  + Pack
+                </span>
+              )}
+
+              <div
+                className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-md flex items-center justify-center ${
+                  item.isVeg
+                    ? 'border-green-600 bg-green-500'
+                    : 'border-red-600 bg-red-500'
+                }`}
+              >
+                <div className="w-2 h-2 bg-white rounded-full" />
+              </div>
+            </div>
+
+            <div className="mt-2 text-xs sm:text-sm text-gray-600">
+              {item.withBirthdayPack && item.birthdayPackPrice ? (
+                <>
+                  <span>Cake ₹{item.cakePrice}</span>
+                  <span className="mx-2">+</span>
+                  <span>Pack ₹{item.birthdayPackPrice}</span>
+                </>
+              ) : (
+                <span>₹{item.cakePrice} (Cake Only)</span>
+              )}
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removeItem(index)}
+            className="shrink-0"
+          >
+            <Trash2 size={18} className="text-red-500" />
+          </Button>
+        </div>
+
+        {/* Quantity & Price */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="outline" onClick={() => updateQuantity(index, -1)}>
+              <Minus size={14} />
+            </Button>
+
+            <span className="w-10 sm:w-12 text-center font-bold text-base sm:text-lg">
+              {item.quantity}
+            </span>
+
+            <Button size="icon" variant="outline" onClick={() => updateQuantity(index, 1)}>
+              <Plus size={14} />
+            </Button>
+          </div>
+
+          <span className="font-bold text-lg sm:text-xl text-green-600">
+            ₹{item.price * item.quantity}
+          </span>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+
 
                 {/* Order Mode */}
-                <div className="bg-gray-100 rounded-xl p-2">
+                <div className="bg-gray-100 rounded-2xl p-2 mx-3">
                   <p className="font-semibold mb-3">Order Type</p>
                   <div className="grid grid-cols-2 gap-3">
                     <Button
-                      variant={orderMode === "offline" ? "destructive" : "outline"}
+                      variant={orderMode === "offline" ? "green" : "outline"}
                       className="h-14"
                       onClick={() => setOrderMode("offline")}
                     >
-                      <Store size={20} />
-                      Dine-in/Takeaway
+                      <Store size={22} className="" />
+                      Takeaway
                     </Button>
                     <Button
-                      variant={orderMode === "online" ? "gogreen" : "outline"}
+                      variant={orderMode === "online" ? "orange" : "outline"}
                       className="h-14"
                       onClick={() => setOrderMode("online")}
                     >
-                      <Bike size={20} />
+                      <Bike size={22} className="" />
                       Delivery (+₹50)
                     </Button>
                   </div>
                 </div>
 
-                {/* Customer Info + Notes */}
-                <div className="space-y-4">
+                {/* Customer Info */}
+                <div className="space-y-4 mx-4">
                   <div className="space-y-1">
-                    <Label htmlFor="name">Your Name</Label>
+                    <Label>Your Name *</Label>
                     <Input
-                      id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
+                      placeholder="Enter your full name..."
                     />
                   </div>
-
                   <div className="space-y-1">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label>Phone Number *</Label>
                     <Input
-                      id="phone"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Enter your phone number"
+                      placeholder="Enter your mobile number..."
                     />
                   </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="notes">Special Instructions (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="E.g., Less cream, add cherry, extra chocolate..."
-                      rows={3}
-                      className="resize-none"
-                    />
-                  </div>
-
                   {orderMode === "online" && (
                     <div className="space-y-1">
-                      <Label htmlFor="address">Delivery Address</Label>
+                      <Label>Delivery Address *</Label>
                       <Textarea
-                        id="address"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Enter full address..."
+                        placeholder="Full address with landmark..."
                         rows={3}
                       />
                     </div>
                   )}
+                  <div className="space-y-1">
+                    <Label>Special Instructions (Optional)</Label>
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="E.g., Less sweet, add cream, message on cake..."
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
                 {/* Price Summary */}
-                <div className="bg-linear-to-r from-yellow-50 to-orange-50 rounded-xl p-5 border-2 border-yellow-300">
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal}</span>
-                  </div>
-                  {orderMode === "online" && (
+                <div className="bg-linear-to-r from-yellow-50 to-orange-50 rounded-2xl p-4 mx-4  border-2 border-yellow-300">
+                  <div className="space-y-2">
                     <div className="flex justify-between text-lg">
-                      <span>Delivery Charge</span>
-                      <span className="text-blue-600">+₹{deliveryCharge}</span>
+                      <span>Subtotal</span>
+                      <span className="font-bold">₹{subtotal}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-2xl font-bold text-green-600 mt-3 pt-3 border-t-2 border-yellow-300">
-                    <span>Total</span>
-                    <span>₹{total}</span>
+                    {orderMode === "online" && (
+                      <div className="flex justify-between text-lg">
+                        <span>Delivery Charge</span>
+                        <span className="text-blue-600 font-bold">+₹{deliveryCharge}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-2xl font-bold text-green-600 pt-4 border-t-2 border-dashed">
+                      <span>Total</span>
+                      <span>₹{total}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Place Order Button */}
-                <Button
-                  className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700"
-                  onClick={sendWhatsAppOrder}
-                  disabled={!name || !phone || cart.length === 0}
-                >
-                  Place Order via WhatsApp
-                </Button>
+                {/* Place Order */}
+                <div className="w-full flex justify-center px-4 mt-6">
+  <Button
+    size="lg"
+    className="
+      w-full max-w-sm
+      h-14
+      text-lg sm:text-xl
+      font-bold
+      bg-green-600 hover:bg-green-700
+      shadow-lg
+      rounded-xl
+    "
+    onClick={sendWhatsAppOrder}
+    disabled={
+      !name ||
+      !phone ||
+      cart.length === 0 ||
+      (orderMode === "online" && !address)
+    }
+  >
+    Place Order via WhatsApp
+  </Button>
+</div>
+
               </>
             )}
           </div>

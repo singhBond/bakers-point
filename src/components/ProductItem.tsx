@@ -35,15 +35,19 @@ const DescriptionWithReadMore: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+interface QuantityOption {
+  quantity: string;
+  cakePrice: number;
+  birthdayPackPrice?: number | null;
+}
+
 interface Product {
   id: string;
   name: string;
-  price: number;
-  halfPrice?: number;
   description?: string;
   imageUrl?: string;
   imageUrls?: string[];
-  quantity?: string; // e.g. "1 Pound,2 Pound,3 Pound" or just "1 Pc"
+  quantities: QuantityOption[];
   isVeg: boolean;
 }
 
@@ -55,20 +59,32 @@ interface ProductItemProps {
 export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   const [open, setOpen] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(1);
-  const [tempPortion, setTempPortion] = useState<"full" | "half">("full");
+  const [withBirthdayPack, setWithBirthdayPack] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedQuantityIndex, setSelectedQuantityIndex] = useState(0);
 
-  // NEW: For quantity selection tabs
-  const [selectedQuantityOption, setSelectedQuantityOption] = useState<string | null>(null);
-
+  // Reset on dialog open
   useEffect(() => {
     if (open) {
       setTempQuantity(1);
-      setTempPortion("full");
+      setWithBirthdayPack(false);
       setCurrentImageIndex(0);
-      setSelectedQuantityOption(null); // reset on open
+      setSelectedQuantityIndex(0);
     }
   }, [open]);
+
+  // Safety check
+  if (!product.quantities || product.quantities.length === 0) {
+    return null;
+  }
+
+  const selectedQty = product.quantities[selectedQuantityIndex];
+  const hasBirthdayPackOption = selectedQty.birthdayPackPrice !== null && selectedQty.birthdayPackPrice !== undefined;
+
+  const basePrice = selectedQty.cakePrice;
+  const addOnPrice = withBirthdayPack && hasBirthdayPackOption ? selectedQty.birthdayPackPrice! : 0;
+  const currentPrice = basePrice + addOnPrice;
+  const totalPrice = currentPrice * tempQuantity;
 
   const getImageArray = () => {
     return product.imageUrls?.length
@@ -79,40 +95,28 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   };
 
   const images = getImageArray();
+  const firstImage = images[0];
 
-  // Parse quantity options if exists (e.g. "1 Pound,2 Pound,3 Pound")
-  const quantityOptions = product.quantity
-    ? product.quantity.split(",").map((q) => q.trim()).filter(Boolean)
-    : [];
-
-  const hasMultipleQuantityOptions = quantityOptions.length > 1;
-
-  // Use selected option or fallback to first one or product.quantity
-  const displayQuantity = selectedQuantityOption || quantityOptions[0] || product.quantity || "";
-
-  const currentPrice =
-    tempPortion === "half"
-      ? product.halfPrice || product.price / 2
-      : product.price;
-
-  const totalPrice = currentPrice * tempQuantity;
-
-  // INSTANT CART UPDATE + TRIGGER EVENT
   const addToCart = () => {
     const cart = JSON.parse(localStorage.getItem("fastfood_cart") || "[]");
     const newItem = {
       id: product.id,
       name: product.name,
       price: currentPrice,
-      portion: tempPortion,
       quantity: tempQuantity,
       isVeg: product.isVeg,
-      imageUrl: images[0],
-      serves: displayQuantity || undefined, // send selected quantity
+      imageUrl: firstImage,
+      serves: selectedQty.quantity,
+      withBirthdayPack: withBirthdayPack && hasBirthdayPackOption,
+      cakePrice: basePrice,
+      birthdayPackPrice: hasBirthdayPackOption ? selectedQty.birthdayPackPrice : undefined,
     };
 
     const existingIndex = cart.findIndex(
-      (i: any) => i.id === newItem.id && i.portion === newItem.portion
+      (i: any) =>
+        i.id === newItem.id &&
+        i.serves === newItem.serves &&
+        i.withBirthdayPack === newItem.withBirthdayPack
     );
 
     if (existingIndex > -1) {
@@ -125,7 +129,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     window.dispatchEvent(new Event("cartUpdated"));
 
     const toast = document.createElement("div");
-    toast.innerText = `Added ${tempQuantity}x ${product.name} (${displayQuantity}) to cart!`;
+    toast.innerText = `Added ${tempQuantity}x ${product.name} (${selectedQty.quantity}${withBirthdayPack ? " + Pack" : ""})!`;
     toast.className = "fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 animate-bounce";
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
@@ -141,11 +145,43 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     }
   };
 
-  const firstImage = images[0];
+  const displayPriceForCard = product.quantities[0].cakePrice + (product.quantities[0].birthdayPackPrice || 0);
+
+  // === PREVENT BROWSER BACK WHEN DIALOG IS OPEN ===
+  useEffect(() => {
+    if (open) {
+      // Push a dummy history state when dialog opens
+      window.history.pushState(null, "", window.location.href);
+
+      const handlePopState = (e: PopStateEvent) => {
+        // When back is pressed, just close dialog instead of navigating
+        setOpen(false);
+        // Prevent default back behavior
+        e.preventDefault();
+        // Push state again to maintain control
+        window.history.pushState(null, "", window.location.href);
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+      };
+    }
+  }, [open]);
+
+  // Custom handler to prevent back navigation on close
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setOpen(false);
+      // Re-push state to prevent accidental back after close
+      window.history.pushState(null, "", window.location.href);
+    }
+  };
 
   return (
     <>
-      {/* Product Card (unchanged) */}
+      {/* Product Card */}
       <div
         onClick={() => {
           onClick?.();
@@ -180,19 +216,19 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
           </h3>
           <div className="mt-2 flex items-center gap-3 flex-wrap">
             <span className="text-2xl font-bold text-green-600">
-              ₹{product.price}
+              ₹{displayPriceForCard}
             </span>
-            {product.halfPrice && (
+            {product.quantities.length > 1 && (
               <span className="text-sm text-gray-500">
-                | Half: ₹{product.halfPrice}
+                Starting price
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Detail Dialog */}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-full w-full h-full md:max-w-2xl md:h-auto md:max-h-[85vh] rounded-none md:rounded-2xl p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-4 md:p-6 pb-2 shrink-0 border-b">
             <DialogTitle className="text-lg md:text-2xl font-bold flex items-center gap-3 pr-10">
@@ -211,6 +247,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
           <div className="flex-1 overflow-y-auto px-4 py-4">
             <div className="flex flex-col md:flex-row gap-4">
+              {/* Image Section */}
               <div className="relative w-full md:w-1/2 h-64 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                 <img
                   src={images[currentImageIndex] || "/placeholder.svg"}
@@ -240,78 +277,91 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                 )}
               </div>
 
+              {/* Details Section */}
               <div className="flex-1 flex flex-col justify-between px-2 md:px-0">
                 <div className="space-y-4">
                   {product.description && (
-                    <div>
-                      <DescriptionWithReadMore text={product.description} />
-                    </div>
-                  )}
+  <div className="relative bg-gray-50 border-l-4 border-orange-400 rounded-lg p-3">
+    {/* Opening quote */}
+    <span className="absolute -top-2 -left-1 text-5xl text-orange-300 font-serif">
+      “
+    </span>
 
-                  {product.halfPrice && (
+    {/* Description */}
+    <p className="italic text-gray-700 leading-relaxed font-serif">
+      <DescriptionWithReadMore text={product.description} />
+    </p>
+
+    {/* Closing quote */}
+    <span className="absolute -bottom-7 right-2 text-5xl text-orange-300 font-serif">
+      ”
+    </span>
+  </div>
+)}
+
+
+                  {/* Quantity Tabs */}
+                  <div>
+                    <p className="text-md font-medium text-gray-700 mb-3">Select Quantity:</p>
+                    <div className="grid grid-cols-4 md:grid-cols-3 gap-6">
+                      {product.quantities.map((qty, index) => (
+                        <Button
+                          key={index}
+                          variant={selectedQuantityIndex === index ? "default" : "outline"}
+                          className={`h-10 w-18 text-sm font-medium rounded-xl ${
+                            selectedQuantityIndex === index
+                              ? "bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg"
+                              : "border-gray-300"
+                          }`}
+                          onClick={() => {
+                            setSelectedQuantityIndex(index);
+                            setWithBirthdayPack(false);
+                          }}
+                        >
+                          {qty.quantity}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Birthday Pack Option */}
+                  {hasBirthdayPackOption && (
                     <div>
-                      <p className="text-md font-medium text-gray-700 mb-2">Cake Type:</p>
+                      <p className="text-md font-medium text-gray-700 mb-2">Pack Type:</p>
                       <div className="flex gap-3">
                         <Button
-                          variant={tempPortion === "full" ? "orange" : "outline"}
+                          variant={!withBirthdayPack ? "amber" : "outline"}
                           size="sm"
                           className="flex-1"
-                          onClick={() => setTempPortion("full")}
+                          onClick={() => setWithBirthdayPack(false)}
                         >
                           Cake Only
+                          <span className="ml-2 text-sm opacity-80">₹{basePrice}</span>
                         </Button>
                         <Button
-                          variant={tempPortion === "half" ? "orange" : "outline"}
+                          variant={withBirthdayPack ? "amber" : "outline"}
                           size="sm"
                           className="flex-1"
-                          onClick={() => setTempPortion("half")}
+                          onClick={() => setWithBirthdayPack(true)}
                         >
-                          Birthday Pack
+                          + Birthday Pack
+                          <span className="ml-2 text-sm opacity-80">₹{selectedQty.birthdayPackPrice}</span>
                         </Button>
                       </div>
                     </div>
                   )}
 
-                  {/* NEW: Square Quantity Tabs */}
-                  {hasMultipleQuantityOptions && (
+                  {/* Price & Qty Selector */}
+                  <div className="flex items-center justify-between gap-4 mt-6">
                     <div>
-                      <p className="text-md font-medium text-gray-700 mb-2">Select Quantity:</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        {quantityOptions.map((option) => (
-                          <Button
-                            key={option}
-                            variant={selectedQuantityOption === option ? "default" : "outline"}
-                            className={`h-12 text-sm font-medium ${
-                              selectedQuantityOption === option
-                                ? "bg-yellow-600 hover:bg-yellow-700 text-white"
-                                : ""
-                            }`}
-                            onClick={() => setSelectedQuantityOption(option)}
-                          >
-                            {option}
-                          </Button>
-                        ))}
-                      </div>
-                      {!selectedQuantityOption && quantityOptions[0] && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Default: {quantityOptions[0]}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Show single quantity if no options */}
-                  {!hasMultipleQuantityOptions && product.quantity && product.quantity !== "1" && (
-                    <p className="text-md text-gray-600">
-                      <strong>Quantity :</strong> {product.quantity}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between gap-4 mt-4">
-                    <div>
-                      <p className="text-2xl md:text-3xl font-bold text-green-600">
+                      <p className="text-3xl font-bold text-green-600">
                         ₹{totalPrice.toFixed(0)}
                       </p>
+                      {withBirthdayPack && hasBirthdayPackOption && (
+                        <p className="text-sm text-gray-500">
+                          Cake ₹{basePrice} + Pack ₹{selectedQty.birthdayPackPrice}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -320,26 +370,27 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-10 w-10"
                           onClick={() => setTempQuantity(Math.max(1, tempQuantity - 1))}
                         >
-                          <Minus size={16} />
+                          <Minus size={18} />
                         </Button>
-                        <span className="w-12 text-center font-bold">{tempQuantity}</span>
+                        <span className="w-14 text-center font-bold text-lg">{tempQuantity}</span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-10 w-10"
                           onClick={() => setTempQuantity(tempQuantity + 1)}
                         >
-                          <Plus size={16} />
+                          <Plus size={18} />
                         </Button>
                       </div>
                     </div>
                   </div>
 
+                  {/* Add to Cart Button */}
                   <Button
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6 text-base mt-6"
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-7 text-lg mt-8 rounded-xl shadow-lg"
                     onClick={addToCart}
                   >
                     Add to Cart • ₹{totalPrice.toFixed(0)}

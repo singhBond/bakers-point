@@ -179,19 +179,27 @@ export default function AdminPanel() {
 
   return (
     <section className="min-h-screen bg-linear-to-b from-yellow-500 via-orange-400 to-red-400 p-4 md:p-6 lg:p-8">
+       <div 
+      className="absolute inset-0   bg-repeat " 
+      style={{ 
+        backgroundImage: `url("https://i.pinimg.com/736x/02/b6/55/02b655eea8cd1491b90b358aa7ac1908.jpg")`,
+        backgroundColor: "#5c4033" 
+      }}
+    >
+    
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-yellow-50">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 mt-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-yellow-950">
             Admin - Bakery Point
           </h1>
           <Button
             variant="ghost"
-            size="sm"
-            className="text-yellow-50 hover:text-white hover:bg-white/20"
+            size="lg"
+            className="text-yellow-950 hover:text-black hover:bg-amber-500"
             onClick={handleLogout}
           >
-            <LogOut className="mr-2 h-5 w-5" />
+            <LogOut className="mr-2 h-8 w-8" />
             Logout
           </Button>
         </div>
@@ -359,6 +367,7 @@ export default function AdminPanel() {
             )}
           </>
         )}
+      </div>
       </div>
     </section>
   );

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Pencil, X, Upload } from "lucide-react";
+import { Pencil, Upload, X, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +19,10 @@ import { Button } from "@/src/components/ui/button";
 import { Switch } from "@/src/components/ui/switch";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
-import { Product } from "@/src/types/Product"; // ✅ FIXED — shared Product type
 
-// Image compression utility
-const compressImage = (file: File): Promise<string> => {
-  return new Promise((resolve) => {
+// Image compression utility (unchanged)
+const compressImage = (file: File): Promise<string> =>
+  new Promise((resolve) => {
     const img = new Image();
     const reader = new FileReader();
 
@@ -32,16 +31,15 @@ const compressImage = (file: File): Promise<string> => {
     img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d")!;
-      let width = img.width;
-      let height = img.height;
-      const MAX_DIM = 1200;
+      let { width, height } = img;
+      const MAX = 1200;
 
-      if (width > height && width > MAX_DIM) {
-        height = Math.round((height * MAX_DIM) / width);
-        width = MAX_DIM;
-      } else if (height > MAX_DIM) {
-        width = Math.round((width * MAX_DIM) / height);
-        height = MAX_DIM;
+      if (width > height && width > MAX) {
+        height = (height * MAX) / width;
+        width = MAX;
+      } else if (height > MAX) {
+        width = (width * MAX) / height;
+        height = MAX;
       }
 
       canvas.width = width;
@@ -49,7 +47,8 @@ const compressImage = (file: File): Promise<string> => {
       ctx.drawImage(img, 0, 0, width, height);
 
       let quality = 0.9;
-      const tryCompress = () => {
+
+      const compressLoop = () => {
         const dataUrl = canvas.toDataURL("image/jpeg", quality);
         const sizeKB = (dataUrl.length * 0.75) / 1024;
 
@@ -57,81 +56,108 @@ const compressImage = (file: File): Promise<string> => {
           resolve(dataUrl);
         } else {
           quality -= 0.1;
-          setTimeout(tryCompress, 0);
+          setTimeout(compressLoop, 0);
         }
       };
 
-      tryCompress();
+      compressLoop();
     };
 
-    reader.onerror = () => resolve("");
+    img.onerror = () => resolve("");
     reader.readAsDataURL(file);
   });
-};
 
-// DragDropUpload
+// Updated DragDropUpload – inline with previews
 const DragDropUpload: React.FC<{
-  onAdd: (images: string[]) => void;
+  onImagesChange: (imgs: string[]) => void;
   previews: string[];
-  onRemove: (index: number) => void;
-}> = ({ onAdd, previews, onRemove }) => {
-  const [dragActive, setDragActive] = useState(false);
+  onRemove: (i: number) => void;
+}> = ({ onImagesChange, previews, onRemove }) => {
+  const [drag, setDrag] = useState(false);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
-    const compressed = await Promise.all(Array.from(files).map(compressImage));
-    const valid = compressed.filter((img): img is string => !!img);
-    if (valid.length > 0) onAdd(valid);
+
+    const compressed = await Promise.all([...files].map(compressImage));
+    const valid = compressed.filter(Boolean) as string[];
+
+    if (valid.length > 0) onImagesChange(valid);
   };
 
   return (
-    <div className="space-y-3">
-      <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-          dragActive
-            ? "border-yellow-500 bg-yellow-50"
-            : "border-gray-300 hover:border-yellow-500"
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragActive(false);
-          handleFiles(e.dataTransfer.files);
-        }}
-        onClick={() =>
-          document.getElementById("edit-product-image-input")?.click()
-        }
-      >
-        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-        <p className="text-sm text-gray-600 mt-2">
-          {previews.length > 0
-            ? "Add more images"
-            : "Click or drag to add images"}
-        </p>
-        <p className="text-xs text-gray-500">
-          Auto-compressed under 500 KB each
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <input
-        id="edit-product-image-input"
+        id="edit-prod-img"
         type="file"
+        hidden
         accept="image/*"
         multiple
-        hidden
         onChange={(e) => handleFiles(e.target.files)}
       />
+
+      <div className="flex flex-wrap items-end gap-3">
+        {previews.map((src, i) => (
+          <div key={i} className="relative group">
+            <img
+              src={src}
+              alt="preview"
+              className="w-28 h-28 object-cover rounded-md border"
+            />
+            <button
+              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+              onClick={() => onRemove(i)}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+
+        <div
+          className={`flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed rounded-md cursor-pointer transition ${
+            drag ? "border-yellow-500 bg-yellow-50" : "border-gray-300 hover:border-yellow-500"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDrag(true);
+          }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            handleFiles(e.dataTransfer.files);
+          }}
+          onClick={() => document.getElementById("edit-prod-img")?.click()}
+        >
+          <Upload className="h-8 w-8 text-gray-400" />
+          <p className="mt-1 text-xs text-gray-600">
+            {previews.length ? "Add more" : "Upload"}
+          </p>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">Auto-compressed under 500KB</p>
     </div>
   );
 };
 
+type QuantityPrice = {
+  quantity: string;
+  cakePrice: number;
+  birthdayPackPrice?: number | null;
+};
+
 interface EditProductDialogProps {
   categoryId: string;
-  product: Product;
+  product: {
+    id: string;
+    name: string;
+    description?: string | null;
+    quantities: QuantityPrice[];
+    imageUrls?: string[] | null;
+    imageUrl?: string;
+    isVeg: boolean;
+    product: string;
+  };
 }
 
 export default function EditProductDialog({
@@ -142,49 +168,92 @@ export default function EditProductDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const [name, setName] = useState(product.name);
-  const [price, setPrice] = useState<number | "">(product.price);
-  const [halfPrice, setHalfPrice] = useState<number | "">(
-    product.halfPrice || ""
-  );
-  const [quantity, setQuantity] = useState(product.quantity || "1");
   const [description, setDescription] = useState(product.description || "");
   const [isVeg, setIsVeg] = useState(product.isVeg);
 
-  const [images, setImages] = useState<string[]>(
-    product.imageUrls || (product.imageUrl ? [product.imageUrl] : [])
-  );
-  const [previews, setPreviews] = useState<string[]>(images);
+  const [quantities, setQuantities] = useState<QuantityPrice[]>([]);
 
-  // Reset form when dialog opens
+  const [images, setImages] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  // Initialize form when dialog opens
   useEffect(() => {
-    if (open) {
+    if (open && product) {
       setName(product.name);
-      setPrice(product.price);
-      setHalfPrice(product.halfPrice ?? "");
-      setQuantity(product.quantity ?? "1");
-      setDescription(product.description ?? "");
+      setDescription(product.description || "");
       setIsVeg(product.isVeg);
 
-      const existing =
-        product.imageUrls || (product.imageUrl ? [product.imageUrl] : []);
-      setImages(existing);
-      setPreviews(existing);
+      // Initialize quantities – ensure at least one
+      const existingQuantities = product.quantities || [];
+      setQuantities(
+        existingQuantities.length > 0
+          ? existingQuantities.map((q) => ({
+              quantity: q.quantity,
+              cakePrice: q.cakePrice,
+              birthdayPackPrice: q.birthdayPackPrice ?? undefined,
+            }))
+          : [{ quantity: "1kg", cakePrice: 0 }]
+      );
+
+      // Initialize images
+      const existingImages =
+        product.imageUrls?.filter(Boolean) ||
+        (product.imageUrl ? [product.imageUrl] : []);
+      setImages(existingImages);
+      setPreviews(existingImages);
     }
   }, [open, product]);
 
-  const handleAddImages = (newImages: string[]) => {
-    setImages((prev) => [...prev, ...newImages]);
-    setPreviews((prev) => [...prev, ...newImages]);
+  const addImages = (imgs: string[]) => {
+    setImages((p) => [...p, ...imgs]);
+    setPreviews((p) => [...p, ...imgs]);
   };
 
-  const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (i: number) => {
+    setImages((p) => p.filter((_, x) => x !== i));
+    setPreviews((p) => p.filter((_, x) => x !== i));
+  };
+
+  const addQuantityRow = () => {
+    setQuantities((prev) => [
+      ...prev,
+      { quantity: "", cakePrice: 0, birthdayPackPrice: undefined },
+    ]);
+  };
+
+  const updateQuantity = (
+    index: number,
+    field: keyof QuantityPrice,
+    value: any
+  ) => {
+    setQuantities((prev) =>
+      prev.map((q, i) =>
+        i === index
+          ? {
+              ...q,
+              [field]:
+                field === "cakePrice" || field === "birthdayPackPrice"
+                  ? Number(value) || 0
+                  : value,
+            }
+          : q
+      )
+    );
+  };
+
+  const removeQuantity = (index: number) => {
+    if (quantities.length === 1) {
+      alert("At least one quantity is required.");
+      return;
+    }
+    setQuantities((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     if (!name.trim()) return alert("Name is required");
-    if (!price || price <= 0) return alert("Full price required");
+    if (quantities.some((q) => !q.quantity.trim() || q.cakePrice <= 0)) {
+      return alert("All quantities must have a label and valid cake price");
+    }
 
     setIsLoading(true);
 
@@ -193,10 +262,12 @@ export default function EditProductDialog({
         doc(db, "categories", categoryId, "products", product.id),
         {
           name: name.trim(),
-          price: Number(price),
-          halfPrice: halfPrice ? Number(halfPrice) : null,
-          quantity,
           description: description.trim() || null,
+          quantities: quantities.map((q) => ({
+            quantity: q.quantity.trim(),
+            cakePrice: q.cakePrice,
+            birthdayPackPrice: q.birthdayPackPrice || null,
+          })),
           imageUrls: images.length > 0 ? images : null,
           imageUrl: images[0] || "",
           isVeg,
@@ -220,10 +291,12 @@ export default function EditProductDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] w-full overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Menu Item</DialogTitle>
-          <DialogDescription>Update product details below</DialogDescription>
+          <DialogDescription>
+            Update product details. Only cake + birthday pack price of selected quantity is shown to customers.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-4">
@@ -234,68 +307,79 @@ export default function EditProductDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading}
-              placeholder="Enter item name"
+              placeholder="Enter Item Name"
             />
           </div>
 
-          {/* Prices */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Cake Only *</Label>
-              <Input
-                type="number"
-                value={price}
-                onChange={(e) =>
-                  setPrice(e.target.value ? Number(e.target.value) : "")
-                }
-                disabled={isLoading}
-                placeholder="Enter cake price "
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Birthday Pack Price</Label>
-              <Input
-                type="number"
-                value={halfPrice}
-                onChange={(e) =>
-                  setHalfPrice(e.target.value ? Number(e.target.value) : "")
-                }
-                disabled={isLoading}
-                placeholder="Enter birthday pack price"
-              />
-            </div>
-          </div>
+          {/* Quantities & Prices */}
+          <div className="space-y-3">
+            <Label>Quantities & Prices *</Label>
+            {quantities.map((q, i) => (
+              <div key={i} className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-4">
+                  <Input
+                    placeholder="e.g., 1kg, 500g"
+                    value={q.quantity}
+                    onChange={(e) => updateQuantity(i, "quantity", e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Label className="text-xs">Cake Price *</Label>
+                  <Input
+                    type="number"
+                    placeholder="Cake only"
+                    value={q.cakePrice || ""}
+                    onChange={(e) => updateQuantity(i, "cakePrice", e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Label className="text-xs">Birthday Pack Price</Label>
+                  <Input
+                    type="number"
+                    placeholder="Optional"
+                    value={q.birthdayPackPrice || ""}
+                    onChange={(e) =>
+                      updateQuantity(i, "birthdayPackPrice", e.target.value)
+                    }
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => removeQuantity(i)}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
 
-          {/* Quantity */}
-          <div className="space-y-1">
-            <Label>Quantity</Label>
-            <Input
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="eg: 2 Pound, 1 Pc, etc"
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addQuantityRow}
               disabled={isLoading}
-            />
+            >
+              Add Quantity
+            </Button>
           </div>
 
           {/* Veg Switch */}
           <div className="flex items-center space-x-3">
-            <Switch
-              checked={isVeg}
-              onCheckedChange={setIsVeg}
-              disabled={isLoading}
-            />
+            <Switch checked={isVeg} onCheckedChange={setIsVeg} disabled={isLoading} />
             <Label className="font-medium">
-              {isVeg ? (
-                <span className="text-green-600">Veg</span>
-              ) : (
-                <span className="text-red-600">Non-Veg</span>
-              )}
+              {isVeg ? <span className="text-green-600">Veg</span> : <span className="text-red-600">Non-Veg</span>}
             </Label>
           </div>
 
           {/* Description */}
           <div className="space-y-1">
-            <Label>Description</Label>
+            <Label>Description (Optional)</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -305,54 +389,30 @@ export default function EditProductDialog({
           </div>
 
           {/* Images */}
-
           <div className="space-y-1">
             <Label>Images</Label>
-
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {/* Preview Images */}
-              {previews.map((src, i) => (
-                <div key={i} className="relative group">
-                  <img
-                    src={src}
-                    className="w-full h-36 object-cover rounded-lg border"
-                  />
-                  <button
-                    onClick={() => handleRemoveImage(i)}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
-                    disabled={isLoading}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Upload Field (comes right after images) */}
-              <div className="">
-                <DragDropUpload
-                  previews={previews}
-                  onAdd={handleAddImages}
-                  onRemove={handleRemoveImage}
-                />
-              </div>
-            </div>
+            <DragDropUpload
+              previews={previews}
+              onImagesChange={addImages}
+              onRemove={removeImage}
+            />
           </div>
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isLoading || !name.trim() || !price}
+            disabled={
+              isLoading ||
+              !name.trim() ||
+              quantities.some((q) => !q.quantity.trim() || q.cakePrice <= 0)
+            }
             className="bg-yellow-600 hover:bg-yellow-700"
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? "Saving…" : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
