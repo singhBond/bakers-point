@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bakery's Point",
+  title: "Bakers Corner",
   description: "Bakes n Cakes",
 };
 
