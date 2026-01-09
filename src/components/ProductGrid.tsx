@@ -6,14 +6,23 @@ import { db } from "@/src/lib/firebase";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { ProductItem } from "./ProductItem";
 
+interface QuantityOption {
+  quantity: string;
+  cakePrice: number;
+  birthdayPackPrice?: number | null;
+}
+
 interface Product {
   id: string;
   name: string;
-  price: number;
-  halfPrice?: number;
+  description?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  quantities: QuantityOption[];
   isVeg: boolean;
+  // Legacy fields (optional)
+  price?: number;
+  halfPrice?: number;
 }
 
 export const ProductGrid = ({
@@ -38,14 +47,29 @@ export const ProductGrid = ({
         const item = d.data();
         const imageUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
 
+        // === HANDLE QUANTITIES (Supporting both new and old formats) ===
+        let quantities: QuantityOption[] = [];
+        if (item.quantities && Array.isArray(item.quantities) && item.quantities.length > 0) {
+          quantities = item.quantities;
+        } else {
+          // Fallback to old format
+          quantities = [
+            {
+              quantity: item.quantity || "Standard",
+              cakePrice: item.price || 0,
+              birthdayPackPrice: item.halfPrice,
+            },
+          ];
+        }
+
         return {
           id: d.id,
           name: item.name || "Unnamed",
-          price: item.price || 0,
-          halfPrice: item.halfPrice,
+          description: item.description,
           imageUrl: item.imageUrl,
           imageUrls: imageUrls.filter(Boolean),
           isVeg: item.isVeg ?? true,
+          quantities: quantities,
         } as Product;
       });
 

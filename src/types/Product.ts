@@ -8,4 +8,5 @@ export type Product = {
   imageUrl?: string;
   imageUrls?: string[];
   isVeg: boolean;
+  
 };

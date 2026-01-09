@@ -152,11 +152,14 @@ interface EditProductDialogProps {
     id: string;
     name: string;
     description?: string | null;
-    quantities: QuantityPrice[];
+    quantities?: QuantityPrice[] | null;
     imageUrls?: string[] | null;
     imageUrl?: string;
     isVeg: boolean;
-    product: string;
+    // Legacy fields
+    price?: number;
+    halfPrice?: number | null;
+    quantity?: string;
   };
 }
 
@@ -183,17 +186,30 @@ export default function EditProductDialog({
       setDescription(products.description || "");
       setIsVeg(products.isVeg);
 
-      // Initialize quantities – ensure at least one
-      const existingQuantities = products.quantities || [];
-      setQuantities(
-        existingQuantities.length > 0
-          ? existingQuantities.map((q) => ({
-              quantity: q.quantity,
-              cakePrice: q.cakePrice,
-              birthdayPackPrice: q.birthdayPackPrice ?? undefined,
-            }))
-          : [{ quantity: "1kg", cakePrice: 0 }]
-      );
+      // Initialize quantities – handle legacy or new format
+      let initialQuantities: QuantityPrice[] = [];
+
+      if (products.quantities && products.quantities.length > 0) {
+        initialQuantities = products.quantities.map((q) => ({
+          quantity: q.quantity,
+          cakePrice: q.cakePrice,
+          birthdayPackPrice: q.birthdayPackPrice ?? undefined,
+        }));
+      } else if (products.price !== undefined) {
+        // Legacy fallback
+        initialQuantities = [
+          {
+            quantity: products.quantity || "Standard",
+            cakePrice: products.price,
+            birthdayPackPrice: products.halfPrice ?? undefined,
+          },
+        ];
+      } else {
+        // New item or empty
+        initialQuantities = [{ quantity: "1kg", cakePrice: 0 }];
+      }
+
+      setQuantities(initialQuantities);
 
       // Initialize images
       const existingImages =
