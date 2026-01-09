@@ -7,7 +7,7 @@ interface Props {
 }
 
 export const VegFilter = ({ filter, setFilter }: Props) => (
-  <div className="flex justify-center gap-3 py-4 bg-white shadow-sm sticky top-0 z-30">
+  <div className="flex justify-center gap-3 py-4 bg-amber-100 shadow-sm sticky top-0 z-30">
         <Button
           variant={filter === "all" ? "default" : "outline"}
           className={`flex items-center gap-2 ${

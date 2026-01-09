@@ -128,3 +128,10 @@
 .animate-shine {
   animation: shine 2s infinite;
 }
+
+
+.great-vibes-regular {
+  font-family: "Great Vibes", cursive;
+  font-weight: 400;
+  font-style: normal;
+}

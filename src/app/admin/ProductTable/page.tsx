@@ -90,11 +90,11 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
       <td className="px-4 py-4">
         <div className="font-medium text-gray-900 max-w-xs">
           {product.name}
-          {!isNewFormat && (
+          {/* {!isNewFormat && (
             <Badge variant="secondary" className="ml-2 text-xs">
               Legacy
             </Badge>
-          )}
+          )} */}
         </div>
       </td>
 
@@ -172,7 +172,7 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
       {/* Actions */}
       <td className="px-4 py-4">
         <div className="flex items-center justify-end gap-2">
-          <EditProductDialog categoryId={categoryId} product={product} />
+          <EditProductDialog categoryId={categoryId} products={product} />
 
           <DeleteDialog
             title="Delete Product"

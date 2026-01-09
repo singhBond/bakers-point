@@ -173,7 +173,7 @@ export const Cart = () => {
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-6 z-50 cursor-pointer group"
       >
-        <div className="relative bg-amber-800 hover:bg-yellow-700 text-white p-5 rounded-full shadow-2xl border-4 border-white transition-all group-hover:scale-110">
+        <div className="relative bg-amber-700 hover:bg-amber-900 text-white p-4 rounded-full shadow-2xl border-2 border-white transition-all group-hover:scale-110">
           <ShoppingCart size={32} />
           {totalItems > 0 && (
             <span className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full min-w-9 h-9 flex items-center justify-center font-bold text-sm animate-pulse shadow-lg">

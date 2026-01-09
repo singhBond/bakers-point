@@ -148,7 +148,7 @@ type QuantityPrice = {
 
 interface EditProductDialogProps {
   categoryId: string;
-  product: {
+  products: {
     id: string;
     name: string;
     description?: string | null;
@@ -162,14 +162,14 @@ interface EditProductDialogProps {
 
 export default function EditProductDialog({
   categoryId,
-  product,
+  products,
 }: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [name, setName] = useState(product.name);
-  const [description, setDescription] = useState(product.description || "");
-  const [isVeg, setIsVeg] = useState(product.isVeg);
+  const [name, setName] = useState(products.name);
+  const [description, setDescription] = useState(products.description || "");
+  const [isVeg, setIsVeg] = useState(products.isVeg);
 
   const [quantities, setQuantities] = useState<QuantityPrice[]>([]);
 
@@ -178,13 +178,13 @@ export default function EditProductDialog({
 
   // Initialize form when dialog opens
   useEffect(() => {
-    if (open && product) {
-      setName(product.name);
-      setDescription(product.description || "");
-      setIsVeg(product.isVeg);
+    if (open && products) {
+      setName(products.name);
+      setDescription(products.description || "");
+      setIsVeg(products.isVeg);
 
       // Initialize quantities – ensure at least one
-      const existingQuantities = product.quantities || [];
+      const existingQuantities = products.quantities || [];
       setQuantities(
         existingQuantities.length > 0
           ? existingQuantities.map((q) => ({
@@ -197,12 +197,12 @@ export default function EditProductDialog({
 
       // Initialize images
       const existingImages =
-        product.imageUrls?.filter(Boolean) ||
-        (product.imageUrl ? [product.imageUrl] : []);
+        products.imageUrls?.filter(Boolean) ||
+        (products.imageUrl ? [products.imageUrl] : []);
       setImages(existingImages);
       setPreviews(existingImages);
     }
-  }, [open, product]);
+  }, [open, products]);
 
   const addImages = (imgs: string[]) => {
     setImages((p) => [...p, ...imgs]);
@@ -259,7 +259,7 @@ export default function EditProductDialog({
 
     try {
       await updateDoc(
-        doc(db, "categories", categoryId, "products", product.id),
+        doc(db, "categories", categoryId, "products", products.id),
         {
           name: name.trim(),
           description: description.trim() || null,

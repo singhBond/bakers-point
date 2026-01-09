@@ -79,10 +79,15 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   }
 
   const selectedQty = product.quantities[selectedQuantityIndex];
-  const hasBirthdayPackOption = selectedQty.birthdayPackPrice !== null && selectedQty.birthdayPackPrice !== undefined;
+  const hasBirthdayPackOption =
+    selectedQty.birthdayPackPrice !== null &&
+    selectedQty.birthdayPackPrice !== undefined;
 
   const basePrice = selectedQty.cakePrice;
-  const addOnPrice = withBirthdayPack && hasBirthdayPackOption ? selectedQty.birthdayPackPrice! : 0;
+  const addOnPrice =
+    withBirthdayPack && hasBirthdayPackOption
+      ? selectedQty.birthdayPackPrice!
+      : 0;
   const currentPrice = basePrice + addOnPrice;
   const totalPrice = currentPrice * tempQuantity;
 
@@ -109,7 +114,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
       serves: selectedQty.quantity,
       withBirthdayPack: withBirthdayPack && hasBirthdayPackOption,
       cakePrice: basePrice,
-      birthdayPackPrice: hasBirthdayPackOption ? selectedQty.birthdayPackPrice : undefined,
+      birthdayPackPrice: hasBirthdayPackOption
+        ? selectedQty.birthdayPackPrice
+        : undefined,
     };
 
     const existingIndex = cart.findIndex(
@@ -129,8 +136,11 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     window.dispatchEvent(new Event("cartUpdated"));
 
     const toast = document.createElement("div");
-    toast.innerText = `Added ${tempQuantity}x ${product.name} (${selectedQty.quantity}${withBirthdayPack ? " + Pack" : ""})!`;
-    toast.className = "fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 animate-bounce";
+    toast.innerText = `Added ${tempQuantity}x ${product.name} (${
+      selectedQty.quantity
+    }${withBirthdayPack ? " + Pack" : ""})!`;
+    toast.className =
+      "fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 animate-bounce";
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
 
@@ -145,7 +155,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     }
   };
 
-  const displayPriceForCard = product.quantities[0].cakePrice + (product.quantities[0].birthdayPackPrice || 0);
+  const displayPriceForCard =
+    product.quantities[0].cakePrice +
+    (product.quantities[0].birthdayPackPrice || 0);
 
   // === PREVENT BROWSER BACK WHEN DIALOG IS OPEN ===
   useEffect(() => {
@@ -187,7 +199,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
           onClick?.();
           setOpen(true);
         }}
-        className="overflow-hidden rounded-2xl bg-orange-50 shadow-md shadow-orange-200 hover:shadow-xl transition-all cursor-pointer border border-gray-100 hover:border-orange-300 relative group"
+        className="overflow-hidden rounded-2xl bg-orange-100 shadow-md shadow-orange-200 hover:shadow-xl transition-all cursor-pointer border border-gray-100 hover:border-orange-300 relative group"
       >
         <div className="absolute top-3 left-3 z-10">
           <div
@@ -219,9 +231,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
               ₹{displayPriceForCard}
             </span>
             {product.quantities.length > 1 && (
-              <span className="text-sm text-gray-500">
-                Starting price
-              </span>
+              <span className="text-sm text-gray-500">Starting price</span>
             )}
           </div>
         </div>
@@ -281,33 +291,38 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
               <div className="flex-1 flex flex-col justify-between px-2 md:px-0">
                 <div className="space-y-4">
                   {product.description && (
-  <div className="relative bg-gray-50 border-l-4 border-orange-400 rounded-lg p-3">
-    {/* Opening quote */}
-    <span className="absolute -top-2 -left-1 text-5xl text-orange-300 font-serif">
-      “
-    </span>
+                    <div className="relative bg-gray-50 border-l-4 border-orange-400 rounded-lg p-3">
+                      {/* Opening quote */}
+                      <span className="absolute -top-2 -left-1 text-5xl text-orange-300 font-serif">
+                        “
+                      </span>
 
-    {/* Description */}
-    <p className="italic text-gray-700 leading-relaxed font-serif">
-      <DescriptionWithReadMore text={product.description} />
-    </p>
+                      {/* Description */}
+                      <p className="italic text-gray-700 leading-relaxed font-serif">
+                        <DescriptionWithReadMore text={product.description} />
+                      </p>
 
-    {/* Closing quote */}
-    <span className="absolute -bottom-7 right-2 text-5xl text-orange-300 font-serif">
-      ”
-    </span>
-  </div>
-)}
-
+                      {/* Closing quote */}
+                      <span className="absolute -bottom-7 right-2 text-5xl text-orange-300 font-serif">
+                        ”
+                      </span>
+                    </div>
+                  )}
 
                   {/* Quantity Tabs */}
                   <div>
-                    <p className="text-md font-medium text-gray-700 mb-3">Select Quantity:</p>
+                    <p className="text-md font-medium text-gray-700 mb-3">
+                      Select Quantity:
+                    </p>
                     <div className="grid grid-cols-4 md:grid-cols-3 gap-6">
                       {product.quantities.map((qty, index) => (
                         <Button
                           key={index}
-                          variant={selectedQuantityIndex === index ? "default" : "outline"}
+                          variant={
+                            selectedQuantityIndex === index
+                              ? "default"
+                              : "outline"
+                          }
                           className={`h-10 w-18 text-sm font-medium rounded-xl ${
                             selectedQuantityIndex === index
                               ? "bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg"
@@ -327,7 +342,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                   {/* Birthday Pack Option */}
                   {hasBirthdayPackOption && (
                     <div>
-                      <p className="text-md font-medium text-gray-700 mb-2">Pack Type:</p>
+                      <p className="text-md font-medium text-gray-700 mb-2">
+                        Pack Type:
+                      </p>
                       <div className="flex gap-3">
                         <Button
                           variant={!withBirthdayPack ? "amber" : "outline"}
@@ -336,7 +353,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                           onClick={() => setWithBirthdayPack(false)}
                         >
                           Cake Only
-                          <span className="ml-2 text-sm opacity-80">₹{basePrice}</span>
+                          <span className="ml-2 text-sm opacity-80">
+                            ₹{basePrice}
+                          </span>
                         </Button>
                         <Button
                           variant={withBirthdayPack ? "amber" : "outline"}
@@ -345,7 +364,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                           onClick={() => setWithBirthdayPack(true)}
                         >
                           + Birthday Pack
-                          <span className="ml-2 text-sm opacity-80">₹{selectedQty.birthdayPackPrice}</span>
+                          <span className="ml-2 text-sm opacity-80">
+                            ₹{selectedQty.birthdayPackPrice}
+                          </span>
                         </Button>
                       </div>
                     </div>
@@ -359,23 +380,30 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                       </p>
                       {withBirthdayPack && hasBirthdayPackOption && (
                         <p className="text-sm text-gray-500">
-                          Cake ₹{basePrice} + Pack ₹{selectedQty.birthdayPackPrice}
+                          Cake ₹{basePrice} + Pack ₹
+                          {selectedQty.birthdayPackPrice}
                         </p>
                       )}
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-700 whitespace-nowrap">Qty:</span>
+                      <span className="text-sm text-gray-700 whitespace-nowrap">
+                        Qty:
+                      </span>
                       <div className="flex items-center border rounded-lg">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-10 w-10"
-                          onClick={() => setTempQuantity(Math.max(1, tempQuantity - 1))}
+                          onClick={() =>
+                            setTempQuantity(Math.max(1, tempQuantity - 1))
+                          }
                         >
                           <Minus size={18} />
                         </Button>
-                        <span className="w-14 text-center font-bold text-lg">{tempQuantity}</span>
+                        <span className="w-14 text-center font-bold text-lg">
+                          {tempQuantity}
+                        </span>
                         <Button
                           variant="ghost"
                           size="icon"

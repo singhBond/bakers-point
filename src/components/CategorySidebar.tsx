@@ -77,7 +77,7 @@ export const CategorySidebar: React.FC<Props> = ({
       <div 
       className="absolute inset-0 opacity- backdrop-blur-md bg-repeat " 
       style={{ 
-        backgroundImage: `url("https://i.pinimg.com/736x/02/b6/55/02b655eea8cd1491b90b358aa7ac1908.jpg")`,
+        backgroundImage: `url("https://media.istockphoto.com/id/1351043359/vector/empty-blank-very-light-brown-or-beige-coloured-grunge-wooden-laminate-textured-effect-vector.jpg?s=612x612&w=0&k=20&c=SQ6pWOBouS-t_RlqzRdxmYrPPt8j-ENrV_xrPUrZ4KU=")`,
         backgroundColor: "#5c4033" 
       }}
     >
