@@ -172,7 +172,7 @@ export const Header = () => (
 
     {/* Contact */}
     <p className="relative z-10 text-pink-800 max-w-2xl mt-1 text-sm md:text-2xl font-semibold bg-amber-50/30 px-6 rounded-full border border-white/10">
-      Mob: 6204864794
+      Mob: 6204864794 / 8877018456
     </p>
 
     {/* Timings */}

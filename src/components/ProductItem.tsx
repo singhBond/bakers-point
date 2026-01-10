@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus, Minus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Minus, X } from "lucide-react";
 
 // Read More Component (unchanged)
 const DescriptionWithReadMore: React.FC<{ text: string }> = ({ text }) => {
@@ -58,6 +58,7 @@ interface ProductItemProps {
 
 export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   const [open, setOpen] = useState(false);
+  const [fullImageOpen, setFullImageOpen] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(1);
   const [withBirthdayPack, setWithBirthdayPack] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -73,7 +74,6 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     }
   }, [open]);
 
-  // Safety check
   if (!product.quantities || product.quantities.length === 0) {
     return null;
   }
@@ -159,34 +159,25 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
     product.quantities[0].cakePrice +
     (product.quantities[0].birthdayPackPrice || 0);
 
-  // === PREVENT BROWSER BACK WHEN DIALOG IS OPEN ===
+  // Prevent browser back when main dialog is open
   useEffect(() => {
     if (open) {
-      // Push a dummy history state when dialog opens
       window.history.pushState(null, "", window.location.href);
 
       const handlePopState = (e: PopStateEvent) => {
-        // When back is pressed, just close dialog instead of navigating
         setOpen(false);
-        // Prevent default back behavior
         e.preventDefault();
-        // Push state again to maintain control
         window.history.pushState(null, "", window.location.href);
       };
 
       window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-      };
+      return () => window.removeEventListener("popstate", handlePopState);
     }
   }, [open]);
 
-  // Custom handler to prevent back navigation on close
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setOpen(false);
-      // Re-push state to prevent accidental back after close
       window.history.pushState(null, "", window.location.href);
     }
   };
@@ -237,7 +228,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
         </div>
       </div>
 
-      {/* Detail Dialog */}
+      {/* Main Product Detail Dialog */}
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-full w-full h-full md:max-w-2xl md:h-auto md:max-h-[85vh] rounded-none md:rounded-2xl p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-4 md:p-6 pb-2 shrink-0 border-b">
@@ -255,32 +246,48 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="flex-1 overflow-y-auto px-3 py-1">
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Image Section */}
-              <div className="relative w-full md:w-1/2 h-90 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0 ">
+              {/* Image Section - Click to open full view */}
+              <div
+                className="relative w-full md:w-1/2 h-64 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0 cursor-pointer group"
+                onClick={() => setFullImageOpen(true)}
+              >
+                {/* <p className="absolute p-1 text-white">Tap to enlarge</p> */}
                 <img
                   src={images[currentImageIndex] || "/placeholder.svg"}
                   alt={`${product.name} - ${currentImageIndex + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   onError={(e) => (e.currentTarget.src = "/placeholder.svg")}
                 />
+
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-4 py-2 rounded-full">
+                    Click to enlarge
+                  </span>
+                </div>
 
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={() => navigateImage("prev")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("prev");
+                      }}
                       className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition"
                     >
                       <ChevronLeft size={20} />
                     </button>
                     <button
-                      onClick={() => navigateImage("next")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("next");
+                      }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition"
                     >
                       <ChevronRight size={20} />
                     </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded-full pointer-events-none">
                       {currentImageIndex + 1} / {images.length}
                     </div>
                   </>
@@ -289,29 +296,24 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
               {/* Details Section */}
               <div className="flex-1 flex flex-col justify-between px-2 md:px-0">
+                {/* ... rest of the details section remains exactly the same ... */}
                 <div className="space-y-4">
                   {product.description && (
                     <div className="relative bg-gray-50 border-l-4 border-orange-400 rounded-lg p-3">
-                      {/* Opening quote */}
                       <span className="absolute -top-2 -left-1 text-5xl text-orange-300 font-serif">
                         “
                       </span>
-
-                      {/* Description */}
                       <p className="italic text-gray-700 leading-relaxed font-serif">
                         <DescriptionWithReadMore text={product.description} />
                       </p>
-
-                      {/* Closing quote */}
                       <span className="absolute -bottom-7 right-2 text-5xl text-orange-300 font-serif">
                         ”
                       </span>
                     </div>
                   )}
 
-                  {/* Quantity Tabs */}
                   <div>
-                    <p className="text-md font-medium text-gray-700 mb-3">
+                    <p className="text-md font-medium text-gray-700 mb-1">
                       Select Quantity:
                     </p>
                     <div className="grid grid-cols-4 md:grid-cols-3 gap-6">
@@ -339,10 +341,9 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                     </div>
                   </div>
 
-                  {/* Birthday Pack Option */}
                   {hasBirthdayPackOption && (
                     <div>
-                      <p className="text-md font-medium text-gray-700 mb-2">
+                      <p className="text-md font-medium text-gray-700 mb-1">
                         Pack Type:
                       </p>
                       <div className="flex gap-3">
@@ -372,7 +373,6 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                     </div>
                   )}
 
-                  {/* Price & Qty Selector */}
                   <div className="flex items-center justify-between gap-4 mt-6">
                     <div>
                       <p className="text-3xl font-bold text-green-600">
@@ -416,9 +416,8 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                     </div>
                   </div>
 
-                  {/* Add to Cart Button */}
                   <Button
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-7 text-lg mt-8 rounded-xl shadow-lg"
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-7 text-lg mt-3 rounded-xl shadow-lg"
                     onClick={addToCart}
                   >
                     Add to Cart • ₹{totalPrice.toFixed(0)}
@@ -426,6 +425,44 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
                 </div>
               </div>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Screen Image Viewer */}
+      <Dialog open={fullImageOpen} onOpenChange={setFullImageOpen}>
+        <DialogContent className="max-w-full w-full h-full p-0 bg-black border-none rounded-none">
+          <button
+            onClick={() => setFullImageOpen(false)}
+            className="absolute top-4 right-4 z-50 text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition"
+          >
+            <X size={28} />
+          </button>
+
+          <div className="relative w-full h-full flex items-center justify-center bg-black">
+            <img
+              src={images[currentImageIndex] || "/placeholder.svg"}
+              alt={`${product.name} - full view`}
+              className="max-w-full max-h-full object-contain"
+              onError={(e) => (e.currentTarget.src = "/placeholder.svg")}
+            />
+
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => navigateImage("prev")}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-4 rounded-full transition"
+                >
+                  <ChevronLeft size={32} />
+                </button>
+                <button
+                  onClick={() => navigateImage("next")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-4 rounded-full transition"
+                >
+                  <ChevronRight size={32} />
+                </button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

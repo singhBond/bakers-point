@@ -172,7 +172,7 @@ export default function ProductItemFetcher({
     <>
       {/* Category Header */}
       {categoryName && (
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3 col-span-full">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800  flex items-center gap-3 col-span-full">
           {categoryName}
           <span className="text-sm font-normal text-gray-500">
             ({filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"})
