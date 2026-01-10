@@ -10,31 +10,7 @@ import EditProductDialog from "../Product/Edit Product/page";
 import DeleteDialog from "../DeleteDialog/page";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
-
-type QuantityPrice = {
-  quantity: string;
-  cakePrice: number;
-  birthdayPackPrice?: number | null;
-};
-
-// Unified Product Type – supports both old and new formats
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-
-  // New format
-  quantities?: QuantityPrice[] | null;
-
-  // Old format (legacy support)
-  price?: number;
-  halfPrice?: number | null;
-  quantity?: string;
-
-  imageUrl?: string;
-  imageUrls?: string[] | null;
-  isVeg: boolean;
-};
+import type { Product } from "@/src/types/Product";   // ← Use the central type!
 
 interface ProductRowProps {
   categoryId: string;
@@ -42,47 +18,58 @@ interface ProductRowProps {
 }
 
 export default function ProductRow({ categoryId, product }: ProductRowProps) {
-  const primaryImage = product.imageUrls?.[0] || product.imageUrl || "";
-  const totalImages = (product.imageUrls?.length || 0) + (product.imageUrl ? 1 : 0);
+  const primaryImage = product.imageUrls?.[0] ?? product.imageUrl ?? "";
+  const totalImages = (product.imageUrls?.length ?? 0) + (product.imageUrl ? 1 : 0);
 
-  // === SAFELY HANDLE QUANTITIES (NEW FORMAT) ===
-  let quantities: QuantityPrice[] = [];
-  let isNewFormat = false;
+  // Helper to safely get quantities array (handles both formats)
+  const getQuantities = (): Array<{
+    quantity: string;
+    cakePrice: number;
+    birthdayPackPrice?: number | null;
+  }> => {
+    // Modern format
+    if (Array.isArray(product.quantities) && product.quantities.length > 0) {
+      return product.quantities;
+    }
 
-  if (product.quantities && Array.isArray(product.quantities) && product.quantities.length > 0) {
-    quantities = product.quantities;
-    isNewFormat = true;
-  } else if (product.price !== undefined) {
-    // Fallback: Convert old format to temporary quantity array for display
-    quantities = [
-      {
-        quantity: product.quantity || "Standard",
-        cakePrice: product.price,
-        birthdayPackPrice: product.halfPrice ?? undefined,
-      },
-    ];
-    isNewFormat = false;
-  } else {
-    // Absolute fallback
-    quantities = [{ quantity: "—", cakePrice: 0 }];
-  }
+    // Legacy format fallback
+    if (product.price != null) {
+      return [
+        {
+          quantity: product.quantity ?? "Standard",
+          cakePrice: Number(product.price) || 0,
+          birthdayPackPrice: product.halfPrice ?? null,
+        },
+      ];
+    }
+
+    // Ultimate fallback
+    return [{ quantity: "—", cakePrice: 0 }];
+  };
+
+  const quantities = getQuantities();
 
   // Sort by price (lowest first)
   const sortedQuantities = [...quantities].sort((a, b) => a.cakePrice - b.cakePrice);
   const firstQuantity = sortedQuantities[0];
 
   const hasBirthdayPackOption = quantities.some(
-    (q) => q.birthdayPackPrice !== null && q.birthdayPackPrice !== undefined && q.birthdayPackPrice > 0
+    (q) => typeof q.birthdayPackPrice === "number" && q.birthdayPackPrice > 0
   );
 
   // Quantity labels for display
-  const quantityLabels = quantities.map((q) => q.quantity.trim()).filter(Boolean);
+  const quantityLabels = quantities
+    .map((q) => q.quantity.trim())
+    .filter(Boolean);
+
   const quantityDisplay =
     quantityLabels.length === 1
       ? quantityLabels[0]
       : quantityLabels.length > 3
-      ? `${quantityLabels.slice(0, 3).join(", ")} +${quantityLabels.length - 3} more`
-      : quantityLabels.join(", ");
+        ? `${quantityLabels.slice(0, 3).join(", ")} +${quantityLabels.length - 3} more`
+        : quantityLabels.join(", ") || "—";
+
+  const isLegacy = !Array.isArray(product.quantities) && product.price != null;
 
   return (
     <tr className="border-b hover:bg-orange-50/60 transition-colors duration-200">
@@ -90,11 +77,11 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
       <td className="px-4 py-4">
         <div className="font-medium text-gray-900 max-w-xs">
           {product.name}
-          {/* {!isNewFormat && (
+          {isLegacy && (
             <Badge variant="secondary" className="ml-2 text-xs">
               Legacy
             </Badge>
-          )} */}
+          )}
         </div>
       </td>
 
@@ -117,7 +104,7 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
             className="text-sm font-medium text-gray-700 block truncate"
             title={quantityLabels.join(", ")}
           >
-            {quantityDisplay || "—"}
+            {quantityDisplay}
           </span>
           {quantities.length > 1 && (
             <Badge variant="secondary" className="mt-1 text-xs">
@@ -133,9 +120,7 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
           <Badge
             variant={product.isVeg ? "default" : "destructive"}
             className={`px-3 py-1.5 font-medium ${
-              product.isVeg
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-red-600 hover:bg-red-700"
+              product.isVeg ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
             } text-white`}
           >
             <div className="w-2 h-2 mr-1.5 rounded-full bg-white" />
@@ -172,7 +157,7 @@ export default function ProductRow({ categoryId, product }: ProductRowProps) {
       {/* Actions */}
       <td className="px-4 py-4">
         <div className="flex items-center justify-end gap-2">
-          <EditProductDialog categoryId={categoryId} products={product} />
+          <EditProductDialog categoryId={categoryId} product={product} />
 
           <DeleteDialog
             title="Delete Product"

@@ -62,19 +62,6 @@
 //   </div>
 // );
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React from "react";
 import {
   Cake,
@@ -88,11 +75,14 @@ import {
 import { greatVibes } from "@/src/app/font";
 export const Header = () => (
   <div className="relative overflow-hidden flex flex-col items-center text-center py-4 md:py-12 bg-linear-to-b from-amber-100 via-amber-100 to-amber-300">
-
     {/* Light wooden texture overlay for bakery warmth */}
-    <div className="absolute inset-0 opacity-20 bg-repeat" 
-         style={{ backgroundImage: "url('https://media.istockphoto.com/id/880710798/vector/seamless-vector-bakery-pastry-pattern.jpg?s=612x612&w=0&k=20&c=e5TN-lIQoRhqrdIoJhUs_VfhzcmDxEY869s6s1SRYF8=')" }}>
-    </div>
+    <div
+      className="absolute inset-0 opacity-20 bg-repeat"
+      style={{
+        backgroundImage:
+          "url('https://media.istockphoto.com/id/880710798/vector/seamless-vector-bakery-pastry-pattern.jpg?s=612x612&w=0&k=20&c=e5TN-lIQoRhqrdIoJhUs_VfhzcmDxEY869s6s1SRYF8=')",
+      }}
+    ></div>
 
     {/* Floating Balloons */}
     <div className="absolute top-6 left-6 animate-float">
@@ -115,18 +105,18 @@ export const Header = () => (
     <div className="absolute bottom-44 right-4 animate-pulse delay-300">
       <Flame className="w-8 h-8 text-red-500" />
     </div>
-    <div className="absolute bottom-32 left-2 animate-pulse delay-500">
+    <div className="absolute bottom-22 left-2 animate-pulse delay-500">
       <Flame className="w-8 h-8 text-red-500" />
     </div>
 
     {/* Bakery icons */}
     <div className="absolute top-20 left-4 opacity-60 animate-bounce-slow">
-       <Sparkles className="w-6 h-6 text-amber-700 animate-pulse delay-200" />
+      <Sparkles className="w-6 h-6 text-amber-700 animate-pulse delay-200" />
     </div>
-    <div className="absolute top-32 right-1 opacity-50 ">
-      <Candy className="w-10 h-8 text-pink-500" />
+    <div className="absolute top-40 right-1 opacity-30 ">
+      <Candy className="w-8 h-8 text-pink-500" />
     </div>
-    
+
     <div className="absolute bottom-12 left-4 opacity-50 animate-float-slow">
       <PartyPopper className="w-10 h-10 text-pink-500 rotate-12" />
     </div>
@@ -153,40 +143,37 @@ export const Header = () => (
 
     {/* Title */}
     <h1
-  className={`relative z-10 text-5xl md:text-7xl text-red-700 drop-shadow-2xl mt-1 tracking-wider ${greatVibes.className}`}
-  style={{
-    textShadow: `
+      className={`relative z-10 text-6xl md:text-7xl text-red-700 drop-shadow-2xl mt-1 tracking-wider ${greatVibes.className}`}
+      style={{
+        textShadow: `
       1px 0 currentColor,
       0 1px currentColor,
       1px 1px currentColor
     `,
-  }}
->
-  Bakers Corner
-</h1>
-
-  
+      }}
+    >
+      Bakers Corner
+    </h1>
 
     {/* Tagline */}
-    <h2 className="relative  z-10 text-2xl md:text-5xl text-red-700 mt-1 flex items-center  justify-center great-vibes-regular"
-    style={{
-    textShadow: `
+    <h2
+      className="relative  z-10 text-4xl md:text-5xl text-red-700 mt-1 flex items-center  justify-center great-vibes-regular"
+      style={{
+        textShadow: `
       1px 0 currentColor,
       0 1px currentColor,
       1px 1px currentColor
     `,
-  }}
+      }}
     >
       House of Cakes
-      
       {/* <Sparkles className="w-8 h-8 text-amber-600 animate-pulse" /> */}
-     
     </h2>
 
     {/* Contact */}
-   <p className="relative z-10 text-pink-800 max-w-2xl mt-1 text-sm md:text-2xl font-semibold bg-amber-50/30 px-6 rounded-full border border-white/10">
-       Mob: 6204864794
-   </p>
+    <p className="relative z-10 text-pink-800 max-w-2xl mt-1 text-sm md:text-2xl font-semibold bg-amber-50/30 px-6 rounded-full border border-white/10">
+      Mob: 6204864794
+    </p>
 
     {/* Timings */}
     <p className="relative z-10 text-pink-800 max-w-2xl mt-2 text-sm md:text-lg italic font-medium">
@@ -197,16 +184,6 @@ export const Header = () => (
     <div className="absolute bottom-0 left-0 w-full h-12 bg-linear-to-t from-amber-300/60 via-amber-200/40 to-transparent" />
   </div>
 );
-
-
-
-
-
-
-
-
-
-
 
 // import React from "react";
 // import {
@@ -223,7 +200,7 @@ export const Header = () => (
 //   <div className="relative overflow-hidden flex flex-col items-center text-center py-4 md:py-12 bg-gradient-to-b from-pink-50 via-pink-100 to-pink-200">
 
 //     {/* Subtle light wooden texture overlay kept very faint for pink theme */}
-//     <div className="absolute inset-0 opacity-10 bg-repeat" 
+//     <div className="absolute inset-0 opacity-10 bg-repeat"
 //          style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2zM24 14v4h-4v-4h-2v4h-4v2h4v4h2v-4h4v-2zM12 36v-4h-4v4h-2v-4h-4v-2h4v-4h2v4h4v2z\" fill=\"%23f472b6\"/%3E%3C/g%3E%3C/svg%3E')" }}>
 //     </div>
 
@@ -243,13 +220,13 @@ export const Header = () => (
 //     <div className="absolute top-24 left-12 animate-float">
 //       <Balloon className="w-11 h-11 text-rose-400 rotate-20" />
 //     </div>
-  
+
 //     {/* Bakery icons - pink themed */}
-    
+
 //     <div className="absolute top-32 right-4 opacity-50 animate-bounce">
 //       <Candy className="w-12 h-12 text-pink-500" />
 //     </div>
-   
+
 //     <div className="absolute bottom-16 right-6 opacity-30 animate-float-slow">
 //       <PartyPopper className="w-14 h-14 text-pink-600 rotate-12" />
 //     </div>
@@ -301,15 +278,6 @@ export const Header = () => (
 //   </div>
 // );
 
-
-
-
-
-
-
-
-
-
 // import React from "react";
 // import {
 //   Cake,
@@ -324,13 +292,13 @@ export const Header = () => (
 
 // export const Header = () => (
 //   <div className="relative overflow-hidden flex flex-col items-center text-center py-4 md:py-4 bg-[#f6cdb2]">
-    
+
 //     {/* Wooden Texture Background Overlay */}
-//     <div 
-//       className="absolute inset-0 opacity-20 bg-repeat" 
-//       style={{ 
+//     <div
+//       className="absolute inset-0 opacity-20 bg-repeat"
+//       style={{
 //         backgroundImage: `url("https://www.transparenttextures.com/patterns/wood-pattern.png")`,
-//         backgroundColor: "#5c4033" 
+//         backgroundColor: "#5c4033"
 //       }}
 //     ></div>
 
@@ -353,10 +321,9 @@ export const Header = () => (
 //     <div className="absolute bottom-24 left-12 animate-float opacity-30">
 //       <Cookie className="w-11 h-11 text-amber-400 rotate-45" />
 //     </div>
-  
 
 //    {/* Floating Balloons - all in pink shades */}
-  
+
 //      <div className="absolute top-12 left-6 animate-float-slow opacity-60">
 //       <Balloon className="w-10 h-10 text-amber-700 -rotate-6" />
 //        <Balloon className="w-14 h-14 text-amber-600 rotate-45" />
@@ -365,7 +332,6 @@ export const Header = () => (
 //       <Balloon className="w-9 h-9 text-amber-600 -rotate-12" />
 //        <Balloon className="w-11 h-11 text-amber-700 rotate-20" />
 //     </div>
-
 
 //     {/* Bakery icons */}
 //     <div className="absolute top-32 right-4 opacity-40 animate-bounce ">

@@ -129,8 +129,8 @@ const DragDropUpload: React.FC<{
           onClick={() => document.getElementById("add-prod-img")?.click()}
         >
           <Upload className="h-8 w-8 text-gray-400" />
-          <p className="mt-1 text-xs text-gray-600">
-            {previews.length ? "Add more" : "Upload"}
+          <p className="mt-1 text-xs text-center text-gray-600">
+            {previews.length ? "Add more" : "Upload/ Drag 'n' Drop"}
           </p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
   const [previews, setPreviews] = useState<string[]>([]);
 
   const [quantities, setQuantities] = useState<QuantityPrice[]>([
-    { quantity: "1kg", cakePrice: 0, birthdayPackPrice: undefined }
+    { quantity: "", cakePrice: 0, birthdayPackPrice: undefined }
   ]);
 
   const addImages = (imgs: string[]) => {
@@ -227,7 +227,7 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
       setVeg(true);
       setImages([]);
       setPreviews([]);
-      setQuantities([{ quantity: "1kg", cakePrice: 0, birthdayPackPrice: undefined }]);
+      setQuantities([{ quantity: "", cakePrice: 0, birthdayPackPrice: undefined }]);
       setOpen(false);
     } catch (err) {
       console.error(err);
@@ -264,36 +264,37 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
           <div className="space-y-3">
             <Label>Quantities & Prices *</Label>
             {quantities.map((q, i) => (
-              <div key={i} className="grid grid-cols-12 gap-3 items-end">
-                <div className="col-span-4">
+              <div key={i} className="grid sm:grid-cols-12  gap-3 items-end bg-amber-50 border-2 border-yellow-500 rounded-lg p-2">
+                <div className="col-span-4 space-y-1">
+                  <Label className="text-xs">Unit *</Label>
                   <Input
-                    placeholder="e.g., 1kg, 500g, 2 Pound"
+                    placeholder="e.g. 2 Pound, 1 Pc"
                     value={q.quantity}
                     onChange={(e) => updateQuantity(i, "quantity", e.target.value)}
                     disabled={load}
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-3 space-y-1">
                   <Label className="text-xs">Cake Price *</Label>
                   <Input
                     type="number"
-                    placeholder="Cake only"
+                    placeholder="Cake Price"
                     value={q.cakePrice || ""}
                     onChange={(e) => updateQuantity(i, "cakePrice", e.target.value)}
                     disabled={load}
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-3 space-y-1">
                   <Label className="text-xs">Birthday Pack Price</Label>
                   <Input
                     type="number"
-                    placeholder="Optional"
+                    placeholder="Birthday Pack Price"
                     value={q.birthdayPackPrice || ""}
                     onChange={(e) => updateQuantity(i, "birthdayPackPrice", e.target.value)}
                     disabled={load}
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 mb-1">
                   <Button
                     size="sm"
                     variant="destructive"
@@ -328,7 +329,7 @@ export default function AddProductDialog({ categoryId }: { categoryId: string })
           {/* Description */}
           <div className="space-y-1">
             <Label>Description (Optional)</Label>
-            <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} disabled={load} />
+            <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} disabled={load} placeholder="Enter Item Description here" />
           </div>
 
           {/* Images */}

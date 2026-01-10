@@ -24,29 +24,12 @@ import AddProductDialog from "@/src/app/admin/Product/AddProduct/page";
 import ProductRow from "@/src/app/admin/ProductTable/page";
 import DeleteDialog from "@/src/app/admin/DeleteDialog/page";
 
-// Bakery Icons for Loader
+// Icons & Loader
 import { Cake, Croissant, Cookie, Coffee, Loader2 } from "lucide-react";
 import AdminLoader from "@/src/components/AdminLoader";
 
-interface Category {
-  id: string;
-  name?: string;
-  imageUrl?: string;
-  createdAt?: Timestamp;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  halfPrice?: number | null;
-  quantity?: string;
-  description?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
-  isVeg: boolean;
-  createdAt?: Timestamp;
-}
+// Import shared Product type (this is the correct one!)
+import type { Product } from "@/src/types/Product";
 
 const formatName = (raw: string) =>
   raw
@@ -62,6 +45,14 @@ export default function AdminPanel() {
   const [loadingProductsByCat, setLoadingProductsByCat] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Category interface (unchanged)
+  interface Category {
+    id: string;
+    name?: string;
+    imageUrl?: string;
+    createdAt?: Timestamp;
+  }
 
   const allProducts = useMemo(() => {
     const list: (Product & { categoryId: string; categoryName?: string })[] = [];
@@ -83,6 +74,7 @@ export default function AdminPanel() {
     );
   }, [allProducts, searchQuery]);
 
+  // Cleanup junk (unchanged)
   useEffect(() => {
     const cleanup = async () => {
       const junk = [""];
@@ -95,6 +87,7 @@ export default function AdminPanel() {
     cleanup();
   }, []);
 
+  // Categories listener (unchanged)
   useEffect(() => {
     setLoadingCategories(true);
 
@@ -123,6 +116,7 @@ export default function AdminPanel() {
     return () => unsub();
   }, []);
 
+  // Products listener – IMPORTANT: normalize legacy → quantities
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
@@ -134,19 +128,40 @@ export default function AdminPanel() {
         (snap) => {
           const prods: Product[] = snap.docs.map((d) => {
             const data = d.data();
+
+            // Normalize legacy data to modern quantities format
+            let quantities: Product["quantities"] = data.quantities ?? null;
+
+            if (!Array.isArray(quantities) || quantities.length === 0) {
+              if (data.price != null) {
+                quantities = [
+                  {
+                    quantity: data.quantity ?? "",
+                    cakePrice: Number(data.price) || 0,
+                    birthdayPackPrice: data.halfPrice ?? null,
+                  },
+                ];
+              } else {
+                quantities = null;
+              }
+            }
+
             const imageUrls = data.imageUrls || (data.imageUrl ? [data.imageUrl] : []);
+
             return {
               id: d.id,
               name: data.name ?? "Unnamed Item",
-              price: data.price ?? 0,
-              halfPrice: data.halfPrice ?? undefined,
-              quantity: data.quantity ?? undefined,
-              description: data.description ?? undefined,
-              imageUrl: data.imageUrl ?? undefined,
-              imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+              quantities,
+              description: data.description ?? null,
+              imageUrls: imageUrls.length > 0 ? imageUrls : null,
+              imageUrl: imageUrls[0] ?? null,
               isVeg: data.isVeg ?? true,
-              createdAt: data.createdAt ?? undefined,
-            };
+              createdAt: data.createdAt ?? null,
+              // Optional: keep legacy fields if needed for display/debug
+              price: data.price ?? null,
+              halfPrice: data.halfPrice ?? null,
+              quantity: data.quantity ?? null,
+            } as Product; // safe after normalization
           });
 
           prods.sort((a, b) => {
@@ -173,7 +188,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen w-full bg-linear-to-b from-yellow-500 via-orange-400 to-red-400">
-      {/* Full-screen subtle wood texture overlay */}
+      {/* Wood texture overlay */}
       <div
         className="fixed inset-0 bg-repeat pointer-events-none z-0"
         style={{
@@ -184,7 +199,6 @@ export default function AdminPanel() {
         }}
       />
 
-      {/* Main content */}
       <div className="relative z-10 min-h-screen px-4 py-4 sm:px-6 sm:py-8 md:px-8 md:py-10 lg:px-12">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -243,7 +257,7 @@ export default function AdminPanel() {
                   <table className="w-full min-w-[640px]">
                     <thead className="bg-gray-50 border-b-2">
                       <tr>
-                        {["Product", "Price", "Half", "Serves", "Type",  "Image", "Actions"].map((h) => (
+                        {["Product", "Price", "Half", "Serves", "Type", "Image", "Actions"].map((h) => (
                           <th key={h} className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-700">
                             {h}
                           </th>
@@ -339,8 +353,11 @@ export default function AdminPanel() {
                             <table className="w-full min-w-[640px]">
                               <thead className="bg-linear-to-r from-orange-100 to-yellow-100 border-b-2">
                                 <tr>
-                                  {["Product", "Prices", "Serves",  "Type",  "Image", "Actions"].map((h) => (
-                                    <th key={h} className="px-3 sm:px-6 py-3 sm:py-4 text- text-xs sm:text-sm font-semibold text-gray-700">
+                                  {["Product", "Prices", "Serves", "Type", "Image", "Actions"].map((h) => (
+                                    <th
+                                      key={h}
+                                      className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-700"
+                                    >
                                       {h}
                                     </th>
                                   ))}

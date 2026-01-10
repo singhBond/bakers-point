@@ -12,7 +12,16 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
-import { ShoppingCart, Plus, Minus, Trash2, Store, Bike, X, Package } from "lucide-react";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  Store,
+  Bike,
+  X,
+  Package,
+} from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -94,7 +103,10 @@ export const Cart = () => {
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const total = orderMode === "online" ? subtotal + deliveryCharge : subtotal;
 
   const clearCart = () => {
@@ -121,7 +133,7 @@ export const Cart = () => {
       message += `*Address:* ${address.trim()}%0A`;
       message += `*Delivery Charge:* +₹${deliveryCharge}%0A`;
     } else {
-      message += `*Mode:* Dine-in / Takeaway%0A`;
+      message += `*Mode:*  Takeaway%0A`;
     }
 
     message += `%0A*Order Details:*%0A`;
@@ -129,18 +141,18 @@ export const Cart = () => {
     cart.forEach((item) => {
       const packText = item.withBirthdayPack ? " + Birthday Pack" : "";
       message += `• ${item.quantity}x ${item.name}%0A`;
-      message += `   → ${item.serves}${packText}%0A`;
+      message += `   Qty: ${item.serves}${packText}%0A`;
       if (item.withBirthdayPack && item.birthdayPackPrice) {
-        message += `     (Cake ₹${item.cakePrice} + Pack ₹${item.birthdayPackPrice})%0A`;
+        message += `    (Cake ₹${item.cakePrice}  +Birthday Pack ₹${item.birthdayPackPrice})%0A`;
       }
-      message += `   ₹${item.price * item.quantity}%0A%0A`;
+      message += `   Price: ₹${item.price * item.quantity}%0A%0A`;
     });
 
     message += `*Subtotal:* ₹${subtotal}%0A`;
     if (orderMode === "online") message += `*Delivery:* ₹${deliveryCharge}%0A`;
     message += `*TOTAL:* ₹${total}%0A%0AThank you for your order! 🎉`;
 
-    const whatsappUrl = `https://wa.me/918210936795?text=${message}`;
+    const whatsappUrl = `https://wa.me/916204864794?text=${message}`;
     window.open(whatsappUrl, "_blank");
     clearCart();
   };
@@ -191,18 +203,16 @@ export const Cart = () => {
               <span className="flex items-center gap-3">
                 <ShoppingCart size={28} />
                 Your Cart ({totalItems})
-             </span>
+              </span>
               <Button
-  variant="ghost"
-  size="icon-lg"
-  onClick={() => setOpen(false)}
-  className="h-11 w-11 sm:h-11 sm:w-11"
->
-  <X size={24} className="text-gray-600 " />
-</Button>  
-
+                variant="ghost"
+                size="icon-lg"
+                onClick={() => setOpen(false)}
+                className="h-11 w-11 sm:h-11 sm:w-11"
+              >
+                <X size={24} className="text-gray-600 " />
+              </Button>
             </DialogTitle>
-            
           </DialogHeader>
 
           <div className="p-6 space-y-6">
@@ -216,10 +226,10 @@ export const Cart = () => {
               <>
                 {/* Cart Items */}
                 <div className="space-y-2 px-3 sm:px-0">
-  {cart.map((item, index) => (
-    <div
-      key={index}
-      className="
+                  {cart.map((item, index) => (
+                    <div
+                      key={index}
+                      className="
         mx-auto
         w-full max-w-3xl
         flex gap-3 sm:gap-4
@@ -228,96 +238,105 @@ export const Cart = () => {
         px-6 py-3 sm:p-4
         border border-gray-200
       "
-    >
-      {/* Image */}
-      <div className="w-20 h-20 sm:w-24 sm:h-24  rounded-xl overflow-hidden shrink-0 bg-gray-200">
-        <img
-          src={item.imageUrl || '/placeholder.svg'}
-          alt={item.name}
-          className="w-full h-full object-cover"
-          onError={(e) => (e.currentTarget.src = '/placeholder.svg')}
-        />
-      </div>
+                    >
+                      {/* Image */}
+                      <div className="w-20 h-20 sm:w-24 sm:h-24  rounded-xl overflow-hidden shrink-0 bg-gray-200">
+                        <img
+                          src={item.imageUrl || "/placeholder.svg"}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) =>
+                            (e.currentTarget.src = "/placeholder.svg")
+                          }
+                        />
+                      </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h4 className="font-bold text-base sm:text-lg text-gray-800 truncate">
-              {item.name}
-            </h4>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-base sm:text-lg text-gray-800 truncate">
+                              {item.name}
+                            </h4>
 
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="text-xs sm:text-sm font-medium bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full">
-                {item.serves}
-              </span>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <span className="text-xs sm:text-sm font-medium bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full">
+                                {item.serves}
+                              </span>
 
-              {item.withBirthdayPack && (
-                <span className="text-xs sm:text-sm font-medium bg-orange-100 text-orange-700 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
-                  <Package size={14} />
-                  + Pack
-                </span>
-              )}
+                              {item.withBirthdayPack && (
+                                <span className="text-xs sm:text-sm font-medium bg-orange-100 text-orange-700 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
+                                  <Package size={14} />+ Pack
+                                </span>
+                              )}
 
-              <div
-                className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-md flex items-center justify-center ${
-                  item.isVeg
-                    ? 'border-green-600 bg-green-500'
-                    : 'border-red-600 bg-red-500'
-                }`}
-              >
-                <div className="w-2 h-2 bg-white rounded-full" />
-              </div>
-            </div>
+                              <div
+                                className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-md flex items-center justify-center ${
+                                  item.isVeg
+                                    ? "border-green-600 bg-green-500"
+                                    : "border-red-600 bg-red-500"
+                                }`}
+                              >
+                                <div className="w-2 h-2 bg-white rounded-full" />
+                              </div>
+                            </div>
 
-            <div className="mt-2 text-xs sm:text-sm text-gray-600">
-              {item.withBirthdayPack && item.birthdayPackPrice ? (
-                <>
-                  <span>Cake ₹{item.cakePrice}</span>
-                  <span className="mx-2">+</span>
-                  <span>Pack ₹{item.birthdayPackPrice}</span>
-                </>
-              ) : (
-                <span>₹{item.cakePrice} (Cake Only)</span>
-              )}
-            </div>
-          </div>
+                            <div className="mt-2 text-xs sm:text-sm text-gray-600">
+                              {item.withBirthdayPack &&
+                              item.birthdayPackPrice ? (
+                                <>
+                                  <span>Cake ₹{item.cakePrice}</span>
+                                  <span className="mx-2">+</span>
+                                  <span>Pack ₹{item.birthdayPackPrice}</span>
+                                </>
+                              ) : (
+                                <span>₹{item.cakePrice} (Cake Only)</span>
+                              )}
+                            </div>
+                          </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => removeItem(index)}
-            className="shrink-0"
-          >
-            <Trash2 size={18} className="text-red-500" />
-          </Button>
-        </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(index)}
+                            className="shrink-0"
+                          >
+                            <Trash2 size={18} className="text-red-500" />
+                          </Button>
+                        </div>
 
-        {/* Quantity & Price */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="outline" onClick={() => updateQuantity(index, -1)}>
-              <Minus size={14} />
-            </Button>
+                        {/* Quantity & Price */}
+                        <div className="flex items-center justify-between mt-4">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => updateQuantity(index, -1)}
+                            >
+                              <Minus size={14} />
+                            </Button>
 
-            <span className="w-10 sm:w-12 text-center font-bold text-base sm:text-lg">
-              {item.quantity}
-            </span>
+                            <span className="w-10 sm:w-12 text-center font-bold text-base sm:text-lg">
+                              {item.quantity}
+                            </span>
 
-            <Button size="icon" variant="outline" onClick={() => updateQuantity(index, 1)}>
-              <Plus size={14} />
-            </Button>
-          </div>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => updateQuantity(index, 1)}
+                            >
+                              <Plus size={14} />
+                            </Button>
+                          </div>
 
-          <span className="font-bold text-lg sm:text-xl text-green-600">
-            ₹{item.price * item.quantity}
-          </span>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
-
+                          <span className="font-bold text-lg sm:text-xl ml-4 text-green-600">
+                            ₹{item.price * item.quantity}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Order Mode */}
                 <div className="bg-gray-100 rounded-2xl p-2 mx-3">
@@ -356,6 +375,7 @@ export const Cart = () => {
                     <Label>Phone Number *</Label>
                     <Input
                       value={phone}
+                      type="number"
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Enter your mobile number..."
                     />
@@ -392,7 +412,9 @@ export const Cart = () => {
                     {orderMode === "online" && (
                       <div className="flex justify-between text-lg">
                         <span>Delivery Charge</span>
-                        <span className="text-blue-600 font-bold">+₹{deliveryCharge}</span>
+                        <span className="text-blue-600 font-bold">
+                          +₹{deliveryCharge}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between text-2xl font-bold text-green-600 pt-4 border-t-2 border-dashed">
@@ -404,9 +426,9 @@ export const Cart = () => {
 
                 {/* Place Order */}
                 <div className="w-full flex justify-center px-4 mt-6">
-  <Button
-    size="lg"
-    className="
+                  <Button
+                    size="lg"
+                    className="
       w-full max-w-sm
       h-14
       text-lg sm:text-xl
@@ -415,18 +437,17 @@ export const Cart = () => {
       shadow-lg
       rounded-xl
     "
-    onClick={sendWhatsAppOrder}
-    disabled={
-      !name ||
-      !phone ||
-      cart.length === 0 ||
-      (orderMode === "online" && !address)
-    }
-  >
-    Place Order via WhatsApp
-  </Button>
-</div>
-
+                    onClick={sendWhatsAppOrder}
+                    disabled={
+                      !name ||
+                      !phone ||
+                      cart.length === 0 ||
+                      (orderMode === "online" && !address)
+                    }
+                  >
+                    Place Order via WhatsApp
+                  </Button>
+                </div>
               </>
             )}
           </div>

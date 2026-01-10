@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Pencil, Upload, X, Trash2 } from "lucide-react";
+import { Pencil, Upload, X, Trash2, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,18 @@ import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Button } from "@/src/components/ui/button";
 import { Switch } from "@/src/components/ui/switch";
-import { updateDoc, doc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
+import type { Product } from "@/src/types/Product";
 
-// Image compression utility (unchanged)
+// Local type alias matching your Product.quantities structure
+type QuantityItem = {
+  quantity: string;
+  cakePrice: number;
+  birthdayPackPrice?: number | null;
+};
+
+// Image Compression (unchanged)
 const compressImage = (file: File): Promise<string> =>
   new Promise((resolve) => {
     const img = new Image();
@@ -67,16 +75,17 @@ const compressImage = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-// Updated DragDropUpload – inline with previews
+// DragDropUpload (same as AddProductDialog)
 const DragDropUpload: React.FC<{
   onImagesChange: (imgs: string[]) => void;
   previews: string[];
   onRemove: (i: number) => void;
-}> = ({ onImagesChange, previews, onRemove }) => {
+  disabled?: boolean;
+}> = ({ onImagesChange, previews, onRemove, disabled = false }) => {
   const [drag, setDrag] = useState(false);
 
   const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
+    if (!files || disabled) return;
 
     const compressed = await Promise.all([...files].map(compressImage));
     const valid = compressed.filter(Boolean) as string[];
@@ -93,6 +102,7 @@ const DragDropUpload: React.FC<{
         accept="image/*"
         multiple
         onChange={(e) => handleFiles(e.target.files)}
+        disabled={disabled}
       />
 
       <div className="flex flex-wrap items-end gap-3">
@@ -101,11 +111,12 @@ const DragDropUpload: React.FC<{
             <img
               src={src}
               alt="preview"
-              className="w-28 h-28 object-cover rounded-md border"
+              className="w-28 h-28 object-cover rounded-md border border-gray-200"
             />
             <button
               className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
               onClick={() => onRemove(i)}
+              disabled={disabled}
             >
               <X className="h-3 w-3" />
             </button>
@@ -113,20 +124,22 @@ const DragDropUpload: React.FC<{
         ))}
 
         <div
-          className={`flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed rounded-md cursor-pointer transition ${
+          className={`flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed rounded-md cursor-pointer transition-colors ${
             drag ? "border-yellow-500 bg-yellow-50" : "border-gray-300 hover:border-yellow-500"
-          }`}
+          } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
           onDragOver={(e) => {
+            if (disabled) return;
             e.preventDefault();
             setDrag(true);
           }}
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => {
+            if (disabled) return;
             e.preventDefault();
             setDrag(false);
             handleFiles(e.dataTransfer.files);
           }}
-          onClick={() => document.getElementById("edit-prod-img")?.click()}
+          onClick={() => !disabled && document.getElementById("edit-prod-img")?.click()}
         >
           <Upload className="h-8 w-8 text-gray-400" />
           <p className="mt-1 text-xs text-gray-600">
@@ -140,107 +153,85 @@ const DragDropUpload: React.FC<{
   );
 };
 
-type QuantityPrice = {
-  quantity: string;
-  cakePrice: number;
-  birthdayPackPrice?: number | null;
-};
-
 interface EditProductDialogProps {
   categoryId: string;
-  products: {
-    id: string;
-    name: string;
-    description?: string | null;
-    quantities?: QuantityPrice[] | null;
-    imageUrls?: string[] | null;
-    imageUrl?: string;
-    isVeg: boolean;
-    // Legacy fields
-    price?: number;
-    halfPrice?: number | null;
-    quantity?: string;
-  };
+  product: Product;
 }
 
-export default function EditProductDialog({
-  categoryId,
-  products,
-}: EditProductDialogProps) {
+export default function EditProductDialog({ categoryId, product }: EditProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [name, setName] = useState(products.name);
-  const [description, setDescription] = useState(products.description || "");
-  const [isVeg, setIsVeg] = useState(products.isVeg);
-
-  const [quantities, setQuantities] = useState<QuantityPrice[]>([]);
-
+  // Form state — auto-filled from product
+  const [name, setName] = useState(product.name || "");
+  const [desc, setDesc] = useState(product.description || "");
+  const [isVeg, setVeg] = useState(product.isVeg ?? true);
   const [images, setImages] = useState<string[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [quantities, setQuantities] = useState<QuantityItem[]>([]);
 
-  // Initialize form when dialog opens
+  // Auto-fill when dialog opens
   useEffect(() => {
-    if (open && products) {
-      setName(products.name);
-      setDescription(products.description || "");
-      setIsVeg(products.isVeg);
+    if (!open) return;
 
-      // Initialize quantities – handle legacy or new format
-      let initialQuantities: QuantityPrice[] = [];
+    setName(product.name || "");
+    setDesc(product.description || "");
+    setVeg(product.isVeg ?? true);
 
-      if (products.quantities && products.quantities.length > 0) {
-        initialQuantities = products.quantities.map((q) => ({
-          quantity: q.quantity,
-          cakePrice: q.cakePrice,
-          birthdayPackPrice: q.birthdayPackPrice ?? undefined,
-        }));
-      } else if (products.price !== undefined) {
-        // Legacy fallback
-        initialQuantities = [
-          {
-            quantity: products.quantity || "Standard",
-            cakePrice: products.price,
-            birthdayPackPrice: products.halfPrice ?? undefined,
-          },
-        ];
-      } else {
-        // New item or empty
-        initialQuantities = [{ quantity: "1kg", cakePrice: 0 }];
-      }
+    // Images
+    const existingImages =
+      product.imageUrls?.filter(Boolean) ?? (product.imageUrl ? [product.imageUrl] : []);
+    setImages(existingImages);
+    setPreviews(existingImages);
 
-      setQuantities(initialQuantities);
+    // Quantities loading (support both modern and legacy)
+    let loaded: QuantityItem[] = [];
 
-      // Initialize images
-      const existingImages =
-        products.imageUrls?.filter(Boolean) ||
-        (products.imageUrl ? [products.imageUrl] : []);
-      setImages(existingImages);
-      setPreviews(existingImages);
+    // Modern format (preferred)
+    if (Array.isArray(product.quantities) && product.quantities.length > 0) {
+      loaded = product.quantities.map((q) => ({
+        quantity: String(q.quantity ?? "").trim() || "",
+        cakePrice: Number(q.cakePrice) || 0,
+        birthdayPackPrice: q.birthdayPackPrice ?? null,
+      }));
     }
-  }, [open, products]);
+    // Legacy fallback (if quantities is null/empty but price exists)
+    else if (product.price != null) {
+      loaded = [
+        {
+          quantity: String(product.quantity ?? "").trim(),
+          cakePrice: Number(product.price) || 0,
+          birthdayPackPrice: product.halfPrice ?? null,
+        },
+      ];
+    }
 
-  const addImages = (imgs: string[]) => {
-    setImages((p) => [...p, ...imgs]);
-    setPreviews((p) => [...p, ...imgs]);
+    // Safety net — always have at least one row
+    if (loaded.length === 0) {
+      loaded = [{ quantity: "", cakePrice: 0, birthdayPackPrice: null }];
+    }
+
+    setQuantities(loaded);
+  }, [open, product]);
+
+  const addImages = (newImages: string[]) => {
+    setImages((prev) => [...prev, ...newImages]);
+    setPreviews((prev) => [...prev, ...newImages]);
   };
 
-  const removeImage = (i: number) => {
-    setImages((p) => p.filter((_, x) => x !== i));
-    setPreviews((p) => p.filter((_, x) => x !== i));
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addQuantityRow = () => {
-    setQuantities((prev) => [
-      ...prev,
-      { quantity: "", cakePrice: 0, birthdayPackPrice: undefined },
-    ]);
+    setQuantities((prev) => [...prev, { quantity: "", cakePrice: 0, birthdayPackPrice: null }]);
   };
 
   const updateQuantity = (
     index: number,
-    field: keyof QuantityPrice,
-    value: any
+    field: keyof QuantityItem,
+    value: string
   ) => {
     setQuantities((prev) =>
       prev.map((q, i) =>
@@ -249,8 +240,8 @@ export default function EditProductDialog({
               ...q,
               [field]:
                 field === "cakePrice" || field === "birthdayPackPrice"
-                  ? Number(value) || 0
-                  : value,
+                  ? value === "" ? null : Number(value) || 0
+                  : value.trim(),
             }
           : q
       )
@@ -259,7 +250,7 @@ export default function EditProductDialog({
 
   const removeQuantity = (index: number) => {
     if (quantities.length === 1) {
-      alert("At least one quantity is required.");
+      alert("At least one quantity option is required.");
       return;
     }
     setQuantities((prev) => prev.filter((_, i) => i !== index));
@@ -268,34 +259,36 @@ export default function EditProductDialog({
   const handleSave = async () => {
     if (!name.trim()) return alert("Name is required");
     if (quantities.some((q) => !q.quantity.trim() || q.cakePrice <= 0)) {
-      return alert("All quantities must have a label and valid cake price");
+      return alert("All quantities must have a label and valid cake price (>0)");
     }
 
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      await updateDoc(
-        doc(db, "categories", categoryId, "products", products.id),
-        {
-          name: name.trim(),
-          description: description.trim() || null,
-          quantities: quantities.map((q) => ({
-            quantity: q.quantity.trim(),
-            cakePrice: q.cakePrice,
-            birthdayPackPrice: q.birthdayPackPrice || null,
-          })),
-          imageUrls: images.length > 0 ? images : null,
-          imageUrl: images[0] || "",
-          isVeg,
-        }
-      );
+      await updateDoc(doc(db, "categories", categoryId, "products", product.id), {
+        name: name.trim(),
+        description: desc.trim() || null,
+        quantities: quantities.map((q) => ({
+          quantity: q.quantity.trim(),
+          cakePrice: q.cakePrice,
+          birthdayPackPrice: q.birthdayPackPrice ?? null,
+        })),
+        imageUrls: images.length ? images : null,
+        imageUrl: images[0] || null,
+        isVeg,
+        // Clean legacy fields
+        price: null,
+        halfPrice: null,
+        quantity: null,
+        updatedAt: new Date(),
+      });
 
       setOpen(false);
     } catch (err) {
-      console.error(err);
+      console.error("Update failed:", err);
       alert("Failed to update product");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -311,7 +304,7 @@ export default function EditProductDialog({
         <DialogHeader>
           <DialogTitle>Edit Menu Item</DialogTitle>
           <DialogDescription>
-            Update product details. Only cake + birthday pack price of selected quantity is shown to customers.
+            All existing details are pre-filled automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -322,7 +315,7 @@ export default function EditProductDialog({
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={isLoading}
+              disabled={loading}
               placeholder="Enter Item Name"
             />
           </div>
@@ -334,32 +327,30 @@ export default function EditProductDialog({
               <div key={i} className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-4">
                   <Input
-                    placeholder="e.g., 1kg, 500g"
+                    placeholder="e.g. 2 Pound, 1 Pc"
                     value={q.quantity}
                     onChange={(e) => updateQuantity(i, "quantity", e.target.value)}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
                 <div className="col-span-3">
                   <Label className="text-xs">Cake Price *</Label>
                   <Input
                     type="number"
-                    placeholder="Cake only"
+                    placeholder="Cake Price"
                     value={q.cakePrice || ""}
                     onChange={(e) => updateQuantity(i, "cakePrice", e.target.value)}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
                 <div className="col-span-3">
                   <Label className="text-xs">Birthday Pack Price</Label>
                   <Input
                     type="number"
-                    placeholder="Optional"
-                    value={q.birthdayPackPrice || ""}
-                    onChange={(e) =>
-                      updateQuantity(i, "birthdayPackPrice", e.target.value)
-                    }
-                    disabled={isLoading}
+                    placeholder="Birthday Pack Price"
+                    value={q.birthdayPackPrice ?? ""}
+                    onChange={(e) => updateQuantity(i, "birthdayPackPrice", e.target.value)}
+                    disabled={loading}
                   />
                 </div>
                 <div className="col-span-2">
@@ -367,7 +358,7 @@ export default function EditProductDialog({
                     size="sm"
                     variant="destructive"
                     onClick={() => removeQuantity(i)}
-                    disabled={isLoading}
+                    disabled={loading || quantities.length <= 1}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -379,15 +370,16 @@ export default function EditProductDialog({
               size="sm"
               variant="outline"
               onClick={addQuantityRow}
-              disabled={isLoading}
+              disabled={loading}
+              className="mt-2"
             >
-              Add Quantity
+              <Plus className="h-4 w-4 mr-1" /> Add Quantity
             </Button>
           </div>
 
           {/* Veg Switch */}
           <div className="flex items-center space-x-3">
-            <Switch checked={isVeg} onCheckedChange={setIsVeg} disabled={isLoading} />
+            <Switch checked={isVeg} onCheckedChange={setVeg} disabled={loading} />
             <Label className="font-medium">
               {isVeg ? <span className="text-green-600">Veg</span> : <span className="text-red-600">Non-Veg</span>}
             </Label>
@@ -397,10 +389,11 @@ export default function EditProductDialog({
           <div className="space-y-1">
             <Label>Description (Optional)</Label>
             <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
               rows={3}
-              disabled={isLoading}
+              disabled={loading}
+              placeholder="Enter Item Description here"
             />
           </div>
 
@@ -411,24 +404,26 @@ export default function EditProductDialog({
               previews={previews}
               onImagesChange={addImages}
               onRemove={removeImage}
+              disabled={loading}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
+
           <Button
             onClick={handleSave}
             disabled={
-              isLoading ||
+              loading ||
               !name.trim() ||
               quantities.some((q) => !q.quantity.trim() || q.cakePrice <= 0)
             }
             className="bg-yellow-600 hover:bg-yellow-700"
           >
-            {isLoading ? "Saving…" : "Save Changes"}
+            {loading ? "Saving…" : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

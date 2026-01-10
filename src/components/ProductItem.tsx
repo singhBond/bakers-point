@@ -258,7 +258,7 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
           <div className="flex-1 overflow-y-auto px-4 py-4">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Image Section */}
-              <div className="relative w-full md:w-1/2 h-64 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+              <div className="relative w-full md:w-1/2 h-90 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0 ">
                 <img
                   src={images[currentImageIndex] || "/placeholder.svg"}
                   alt={`${product.name} - ${currentImageIndex + 1}`}
