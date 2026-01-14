@@ -10,6 +10,7 @@ interface Category {
   name: string;
   imageUrl?: string;
   createdAt?: Timestamp | null;
+  order?: number;           // ← added support for order field
 }
 
 interface Props {
@@ -37,14 +38,23 @@ export const CategorySidebar: React.FC<Props> = ({
             name: data.name || "Unnamed Category",
             imageUrl: data.imageUrl || "",
             createdAt: data.createdAt ?? null,
+            order: typeof data.order === "number" ? data.order : undefined,
           };
         });
 
-        // Sort newest first
+        // Sort by order field (ascending) → then by creation date (newest first) as fallback
         fetchedCategories.sort((a, b) => {
-          const aTime = a.createdAt ? a.createdAt.toMillis() : 0;
-          const bTime = b.createdAt ? b.createdAt.toMillis() : 0;
-          return bTime - aTime;
+          const orderA = a.order ?? 999999;
+          const orderB = b.order ?? 999999;
+
+          if (orderA !== orderB) {
+            return orderA - orderB; // lower order number comes first
+          }
+
+          // Fallback: newer first when order is same/missing
+          const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+          const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+          return timeB - timeA;
         });
 
         setCategories(fetchedCategories);
@@ -74,43 +84,44 @@ export const CategorySidebar: React.FC<Props> = ({
 
   return (
     <aside className="w-20 sm:w-40 md:w-32 sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto bg-linear-to-r from-amber-300 via-yellow-50 to-amber-300 border-r rounded-xl shadow-sm p-2 scrollbar-thin">
-      <div 
-      className="absolute inset-0 opacity- backdrop-blur-md bg-repeat " 
-      style={{ 
-        backgroundImage: `url("https://media.istockphoto.com/id/1351043359/vector/empty-blank-very-light-brown-or-beige-coloured-grunge-wooden-laminate-textured-effect-vector.jpg?s=612x612&w=0&k=20&c=SQ6pWOBouS-t_RlqzRdxmYrPPt8j-ENrV_xrPUrZ4KU=")`,
-        backgroundColor: "#5c4033" 
-      }}
-    >
-      {loading || categories.length === 0 ? (
-        // Show 6 skeleton items while loading or empty
-        Array(6).fill(0).map((_, i) => <SkeletonItem key={i} />)
-      ) : (
-        categories.map((cat) => (
-          <div
-            key={cat.id}
-            onClick={() => onCategoryChange(cat.id)}
-            className={`flex flex-col items-center cursor-pointer rounded-xl px-8 py-2 mb-2 transition-all border ${
-              activeCategory === cat.id
-                ? "bg-amber-100 border-amber-500 shadow-lg scale-110"
-                : "hover:bg-amber-50 border-transparent"
-            }`}
-          >
-            <div className="w-16 h-14 rounded-lg overflow-hidden bg-gray-200 shadow-sm">
-              <img
-                src={cat.imageUrl || "/placeholder.svg"}
-                alt={cat.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder.svg";
-                }}
-              />
+      <div
+        className="absolute inset-0 opacity- backdrop-blur-md bg-repeat"
+        style={{
+          backgroundImage: `url("https://media.istockphoto.com/id/1351043359/vector/empty-blank-very-light-brown-or-beige-coloured-grunge-wooden-laminate-textured-effect-vector.jpg?s=612x612&w=0&k=20&c=SQ6pWOBouS-t_RlqzRdxmYrPPt8j-ENrV_xrPUrZ4KU=")`,
+          backgroundColor: "#5c4033",
+        }}
+      >
+        {loading || categories.length === 0 ? (
+          // Show 6 skeleton items while loading or empty
+          Array(6).fill(0).map((_, i) => <SkeletonItem key={i} />)
+        ) : (
+          categories.map((cat) => (
+            <div
+              key={cat.id}
+              onClick={() => onCategoryChange(cat.id)}
+              className={`flex flex-col items-center cursor-pointer rounded-xl px-8 py-2 mb-2 transition-all border ${
+                activeCategory === cat.id
+                  ? "bg-amber-100 border-amber-500 shadow-lg scale-110"
+                  : "hover:bg-amber-50 border-transparent"
+              }`}
+            >
+              <div className="w-16 h-14 rounded-lg overflow-hidden bg-gray-200 shadow-sm">
+                <img
+                  src={cat.imageUrl || "/placeholder.svg"}
+                  alt={cat.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+              </div>
+              <span className="text-xs sm:text-sm font-semibold text-center mt-1 uppercase tracking-wider text-gray-800">
+                {cat.name}
+              </span>
             </div>
-            <span className="text-xs sm:text-sm font-semibold text-center mt-1 uppercase tracking-wider text-gray-800 ">
-              {cat.name}
-            </span>
-          </div>
-        ))
-      )}</div>
+          ))
+        )}
+      </div>
     </aside>
   );
 };

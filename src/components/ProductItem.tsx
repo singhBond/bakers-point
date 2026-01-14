@@ -10,30 +10,37 @@ import {
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Minus, X } from "lucide-react";
+import dynamic from "next/dynamic";
 
-// Read More Component (unchanged)
-const DescriptionWithReadMore: React.FC<{ text: string }> = ({ text }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const maxLength = 120;
+// ── Client-only DescriptionWithReadMore to prevent hydration mismatch ──
+const DescriptionWithReadMore = dynamic(
+  () =>
+    Promise.resolve(({ text }: { text: string }) => {
+      const [isExpanded, setIsExpanded] = useState(false);
+      const maxLength = 120;
 
-  if (!text || text.length <= maxLength) {
-    return <p className="text-sm text-gray-700 leading-relaxed">{text}</p>;
-  }
+      if (!text || text.length <= maxLength) {
+        return (
+          <p className="text-sm text-gray-700 leading-relaxed">{text}</p>
+        );
+      }
 
-  return (
-    <div className="text-sm text-gray-700 leading-relaxed">
-      <p>
-        {isExpanded ? text : `${text.slice(0, maxLength)}...`}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="ml-2 text-orange-600 font-medium hover:underline"
-        >
-          {isExpanded ? "Read Less" : "Read More"}
-        </button>
-      </p>
-    </div>
-  );
-};
+      return (
+        <div className="text-sm text-gray-700 leading-relaxed">
+          <p>
+            {isExpanded ? text : `${text.slice(0, maxLength)}...`}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="ml-2 text-orange-600 font-medium hover:underline"
+            >
+              {isExpanded ? "Read Less" : "Read More"}
+            </button>
+          </p>
+        </div>
+      );
+    }),
+  { ssr: false }
+);
 
 interface QuantityOption {
   quantity: string;
@@ -178,7 +185,6 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setOpen(false);
-      window.history.pushState(null, "", window.location.href);
     }
   };
 
@@ -248,12 +254,11 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
           <div className="flex-1 overflow-y-auto px-3 py-1">
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Image Section - Click to open full view */}
+              {/* Image Section */}
               <div
                 className="relative w-full md:w-1/2 h-64 md:h-80 bg-gray-100 rounded-lg overflow-hidden shrink-0 cursor-pointer group"
                 onClick={() => setFullImageOpen(true)}
               >
-                {/* <p className="absolute p-1 text-white">Tap to enlarge</p> */}
                 <img
                   src={images[currentImageIndex] || "/placeholder.svg"}
                   alt={`${product.name} - ${currentImageIndex + 1}`}
@@ -296,7 +301,6 @@ export const ProductItem = ({ product, onClick }: ProductItemProps) => {
 
               {/* Details Section */}
               <div className="flex-1 flex flex-col justify-between px-2 md:px-0">
-                {/* ... rest of the details section remains exactly the same ... */}
                 <div className="space-y-4">
                   {product.description && (
                     <div className="relative bg-gray-50 border-l-4 border-orange-400 rounded-lg p-3">

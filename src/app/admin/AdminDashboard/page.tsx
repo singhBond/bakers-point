@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { LogOut, Search, Trash2, Package } from "lucide-react";
+import { LogOut, Search, Trash2, Package, GripVertical } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Card } from "@/src/components/ui/card";
@@ -12,7 +12,16 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/src/components/ui/accordion";
-import { collection, onSnapshot, doc, deleteDoc, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  deleteDoc,
+  query,
+  where,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
 import { Timestamp } from "firebase/firestore";
 
@@ -28,7 +37,6 @@ import DeleteDialog from "@/src/app/admin/DeleteDialog/page";
 import { Cake, Croissant, Cookie, Coffee, Loader2 } from "lucide-react";
 import AdminLoader from "@/src/components/AdminLoader";
 
-// Import shared Product type (this is the correct one!)
 import type { Product } from "@/src/types/Product";
 
 const formatName = (raw: string) =>
@@ -39,6 +47,14 @@ const formatName = (raw: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
+interface Category {
+  id: string;
+  name?: string;
+  imageUrl?: string;
+  createdAt?: Timestamp;
+  order?: number;           // ← added
+}
+
 export default function AdminPanel() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [productsByCat, setProductsByCat] = useState<Record<string, Product[]>>({});
@@ -46,67 +62,32 @@ export default function AdminPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Category interface (unchanged)
-  interface Category {
-    id: string;
-    name?: string;
-    imageUrl?: string;
-    createdAt?: Timestamp;
-  }
-
-  const allProducts = useMemo(() => {
-    const list: (Product & { categoryId: string; categoryName?: string })[] = [];
-    categories.forEach((cat) => {
-      (productsByCat[cat.id] || []).forEach((p) => {
-        list.push({ ...p, categoryId: cat.id, categoryName: cat.name });
-      });
-    });
-    return list;
-  }, [categories, productsByCat]);
-
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return allProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
-    );
-  }, [allProducts, searchQuery]);
-
-  // Cleanup junk (unchanged)
-  useEffect(() => {
-    const cleanup = async () => {
-      const junk = [""];
-      for (const name of junk) {
-        const q = query(collection(db, "categories"), where("name", "==", name));
-        const snap = await getDocs(q);
-        for (const d of snap.docs) await deleteDoc(d.ref);
-      }
-    };
-    cleanup();
-  }, []);
-
-  // Categories listener (unchanged)
+  // Categories listener – now also reads order field
   useEffect(() => {
     setLoadingCategories(true);
 
     const unsub = onSnapshot(collection(db, "categories"), (snap) => {
-      const fetched: Category[] = [];
-      snap.docs.forEach((d) => {
+      const fetched: Category[] = snap.docs.map((d) => {
         const data = d.data();
-        fetched.push({
+        return {
           id: d.id,
           name: data.name ? formatName(data.name) : "Unnamed",
           imageUrl: data.imageUrl ?? undefined,
           createdAt: data.createdAt ?? undefined,
-        });
+          order: typeof data.order === "number" ? data.order : 9999, // default high number
+        };
       });
 
+      // Sort by order field first, then by creation date (fallback)
       fetched.sort((a, b) => {
-        const aTime = a.createdAt?.toMillis() ?? 0;
-        const bTime = b.createdAt?.toMillis() ?? 0;
-        return bTime - aTime;
+        const orderA = a.order ?? 9999;
+        const orderB = b.order ?? 9999;
+
+        if (orderA !== orderB) return orderA - orderB;
+
+        const timeA = a.createdAt?.toMillis() ?? 0;
+        const timeB = b.createdAt?.toMillis() ?? 0;
+        return timeB - timeA; // newer first when orders are equal
       });
 
       setCategories(fetched);
@@ -116,7 +97,59 @@ export default function AdminPanel() {
     return () => unsub();
   }, []);
 
-  // Products listener – IMPORTANT: normalize legacy → quantities
+  // Save new order to Firestore
+  const saveCategoryOrder = async (newCategories: Category[]) => {
+    const batch = writeBatch(db);
+
+    newCategories.forEach((cat, index) => {
+      const ref = doc(db, "categories", cat.id);
+      batch.update(ref, { order: index });
+    });
+
+    try {
+      await batch.commit();
+      // No need to setCategories again → snapshot will update automatically
+    } catch (err) {
+      console.error("Failed to save category order:", err);
+    }
+  };
+
+  // Drag & Drop handlers
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, categoryId: string) => {
+    setDragId(categoryId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetId: string) => {
+    e.preventDefault();
+    if (!dragId || dragId === targetId) return;
+
+    const newOrder = [...categories];
+
+    const draggedIndex = newOrder.findIndex((c) => c.id === dragId);
+    const targetIndex = newOrder.findIndex((c) => c.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Remove dragged item
+    const [draggedItem] = newOrder.splice(draggedIndex, 1);
+    // Insert at new position
+    newOrder.splice(targetIndex, 0, draggedItem);
+
+    setCategories(newOrder);
+    saveCategoryOrder(newOrder);
+
+    setDragId(null);
+  };
+
+  // ... rest of your product listeners remain unchanged ...
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
@@ -128,8 +161,6 @@ export default function AdminPanel() {
         (snap) => {
           const prods: Product[] = snap.docs.map((d) => {
             const data = d.data();
-
-            // Normalize legacy data to modern quantities format
             let quantities: Product["quantities"] = data.quantities ?? null;
 
             if (!Array.isArray(quantities) || quantities.length === 0) {
@@ -157,11 +188,10 @@ export default function AdminPanel() {
               imageUrl: imageUrls[0] ?? null,
               isVeg: data.isVeg ?? true,
               createdAt: data.createdAt ?? null,
-              // Optional: keep legacy fields if needed for display/debug
               price: data.price ?? null,
               halfPrice: data.halfPrice ?? null,
               quantity: data.quantity ?? null,
-            } as Product; // safe after normalization
+            } as Product;
           });
 
           prods.sort((a, b) => {
@@ -180,6 +210,26 @@ export default function AdminPanel() {
 
     return () => unsubs.forEach((u) => u());
   }, [categories]);
+
+  const allProducts = useMemo(() => {
+    const list: (Product & { categoryId: string; categoryName?: string })[] = [];
+    categories.forEach((cat) => {
+      (productsByCat[cat.id] || []).forEach((p) => {
+        list.push({ ...p, categoryId: cat.id, categoryName: cat.name });
+      });
+    });
+    return list;
+  }, [categories, productsByCat]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return allProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+    );
+  }, [allProducts, searchQuery]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminAuth");
@@ -238,6 +288,7 @@ export default function AdminPanel() {
           {/* Search Results */}
           {searchQuery.trim() ? (
             <Card className="bg-white/95 backdrop-blur-sm shadow-2xl overflow-hidden mb-10 sm:mb-12">
+              {/* ... search results table remains the same ... */}
               <div className="p-5 sm:p-6 border-b">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                   Search Results
@@ -304,10 +355,15 @@ export default function AdminPanel() {
                       key={cat.id}
                       value={cat.id}
                       className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-yellow-200"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, cat.id)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, cat.id)}
                     >
-                      <AccordionTrigger className="px-3 sm:px-5 py-3 sm:py-4 hover:no-underline hover:bg-orange-50/50 transition">
+                      <AccordionTrigger className="px-3 sm:px-5 py-3 sm:py-4 hover:no-underline hover:bg-orange-50/50 transition cursor-grab active:cursor-grabbing">
                         <div className="flex items-center justify-between w-full pr-2">
-                          <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="flex items-center gap-2 sm:gap-4">
+                            <GripVertical className="h-5 w-5 text-gray-400 cursor-grab active:cursor-grabbing" />
                             {cat.imageUrl && (
                               <img
                                 src={cat.imageUrl}
